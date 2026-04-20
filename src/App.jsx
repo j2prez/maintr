@@ -3118,6 +3118,17 @@ export default function App() {
   }
 
   // Home
+  async function updateHomeItem(itemId, updates) {
+    const mapped = {};
+    if (updates.lastDone !== undefined) mapped.last_done = updates.lastDone;
+    if (updates.label    !== undefined) mapped.label     = updates.label;
+    if (updates.notes    !== undefined) mapped.notes     = updates.notes;
+    if (Object.keys(mapped).length) {
+      await sbFetch("PATCH", `home_items?id=eq.${itemId}`, mapped, jwt);
+      setHomeItems(prev => prev.map(i => i.id!==itemId ? i : {...i,...mapped}));
+    }
+  }
+
   async function addHomeItem(propId, item) {
     const r = await sbFetch("POST", "home_items", {
       asset_id: propId, user_id: uid, label: item.label, category: item.category||"general",
@@ -3622,9 +3633,10 @@ export default function App() {
               <HomeDetail
                 property={p}
                 items={items}
-                logs={logsForProp}
+                homeLogs={logsForProp}
                 onLogItem={(itemId, entry) => logHomeItem(itemId, selProp.id, entry)}
                 onAddItem={item => addHomeItem(selProp.id, item)}
+                onUpdateItem={(itemId, updates) => updateHomeItem(itemId, updates)}
               />
             );
           })()}
