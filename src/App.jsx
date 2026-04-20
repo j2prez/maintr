@@ -947,13 +947,25 @@ async function uploadPhoto(path, dataUrl, token) {
   const [header, b64] = dataUrl.split(",");
   const mime  = header.match(/:(.*?);/)[1];
   const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  // Try POST (new file), fall back to PUT (replace existing)
   const tryUpload = (method) => fetch(`${SUPABASE_URL}/storage/v1/object/photos/${path}`, {
-    method, headers: { "Authorization": `Bearer ${token}`, "apikey": SUPABASE_ANON, "Content-Type": mime },
+    method,
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "apikey": SUPABASE_ANON,
+      "Content-Type": mime,
+      "x-upsert": "true",
+    },
     body: bytes,
   });
   let res = await tryUpload("POST");
   if (!res.ok) res = await tryUpload("PUT");
-  return res.ok ? `${SUPABASE_URL}/storage/v1/object/public/photos/${path}` : null;
+  if (!res.ok) {
+    const err = await res.text();
+    console.error("Photo upload failed:", res.status, err);
+    return null;
+  }
+  return `${SUPABASE_URL}/storage/v1/object/public/photos/${path}`;
 }
 
 // Restore session from localStorage if available
@@ -1799,7 +1811,7 @@ function HomeDetail({ property, items, homeLogs, onLogItem, onAddItem, onUpdateI
 
 
 // ── Bike detail view ──────────────────────────────────────────────────────────
-function BikeDetail({ bike, bikeLogs, bikePhoto, bikeComponents, rideAssignments, onLogItem, onUpdateBike, onSavePhoto, onAddComponent, onAssignRide, onBack }) {
+function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, bikeComponents, rideAssignments, onLogItem, onUpdateBike, onSavePhoto, onAddComponent, onAssignRide, onRefreshPhotos, onBack }) {
   const [tab, setTab]               = useState("stats");
   const [showLogFor, setShowLogFor] = useState(null);
   const [logForm, setLogForm]       = useState({ date:"", miles:"", cost:"", notes:"" });
@@ -1898,6 +1910,7 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, bikeComponents, rideAssignments
           {key:"rides",    label:`🚴 Rides (${myRides.length})`},
           {key:"history",  label:`📜 Service (${allSvcLogs.length})`},
           {key:"costs",    label:"💰 Components"},
+          {key:"gallery",  label:"📸 Photos"},
         ].map(t=>(
           <button key={t.key} className={`tab${tab===t.key?" on":""}`} onClick={()=>setTab(t.key)}>{t.label}</button>
         ))}
@@ -2133,6 +2146,18 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, bikeComponents, rideAssignments
             )
           }
         </>
+      )}
+
+      {/* GALLERY */}
+      {tab==="gallery" && (
+        <PhotoGallery
+          assetId={bike.id}
+          photos={{[bike.id]: bikePhoto}}
+          allPhotos={allPhotos||[]}
+          jwt={window._maintrJwt||""}
+          uid={window._maintrUid||""}
+          onPrimaryChange={onRefreshPhotos||(() => {})}
+        />
       )}
 
       {/* LOG SERVICE MODAL */}
@@ -2462,6 +2487,100 @@ function CategoryManager({ customCats, onSave }) {
   );
 }
 
+
+// ── Photo Gallery (Feature 1 + 2) ────────────────────────────────────────────
+function PhotoGallery({ assetId, photos, allPhotos, jwt, uid, onPrimaryChange }) {
+  const [uploading, setUploading]   = useState(false);
+  const [deleting,  setDeleting]    = useState(null);
+  const fileRef = useRef(null);
+
+  const assetPhotos = allPhotos.filter(p => p.asset_id === assetId)
+                               .sort((a,b) => b.is_primary - a.is_primary);
+
+  async function handleUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      const dataUrl = ev.target.result;
+      const ext  = file.type === "image/png" ? "png" : "jpg";
+      const path = `${assetId}/${Date.now()}.${ext}`;
+      const [header, b64] = dataUrl.split(",");
+      const mime  = header.match(/:(.*?);/)[1];
+      const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      const res = await fetch(`${SUPABASE_URL}/storage/v1/object/photos/${path}`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${jwt}`, "apikey": SUPABASE_ANON, "Content-Type": mime, "x-upsert": "true" },
+        body: bytes,
+      });
+      if (res.ok) {
+        const url = `${SUPABASE_URL}/storage/v1/object/public/photos/${path}`;
+        const isPrimary = assetPhotos.length === 0;
+        const r = await sbFetch("POST", "photos", { asset_id: assetId, user_id: uid, storage_path: path, url, is_primary: isPrimary }, jwt);
+        if (r.ok) onPrimaryChange();
+      }
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function setPrimary(photo) {
+    // Clear existing primary
+    await sbFetch("PATCH", `photos?asset_id=eq.${assetId}`, { is_primary: false }, jwt);
+    // Set new primary
+    await sbFetch("PATCH", `photos?id=eq.${photo.id}`, { is_primary: true }, jwt);
+    onPrimaryChange();
+  }
+
+  async function deletePhoto(photo) {
+    if (!confirm("Delete this photo?")) return;
+    setDeleting(photo.id);
+    // Delete from storage
+    await fetch(`${SUPABASE_URL}/storage/v1/object/photos/${photo.storage_path}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${jwt}`, "apikey": SUPABASE_ANON },
+    });
+    // Delete from DB
+    await sbFetch("DELETE", `photos?id=eq.${photo.id}`, null, jwt);
+    onPrimaryChange();
+    setDeleting(null);
+  }
+
+  return (
+    <div style={{marginTop:16}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+        <div style={{fontSize:".72rem",color:"#6b7280",textTransform:"uppercase",letterSpacing:".07em"}}>Photos ({assetPhotos.length})</div>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          {uploading && <span style={{fontSize:".72rem",color:"#f97316"}}>Uploading…</span>}
+          <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleUpload} />
+          <button className="btn btn-g btn-sm" style={{fontSize:".72rem"}} onClick={()=>fileRef.current?.click()}>+ Add Photo</button>
+        </div>
+      </div>
+      {assetPhotos.length === 0
+        ? <div style={{color:"#4b5563",fontSize:".8rem",padding:"8px 0"}}>No photos yet. Click + Add Photo to upload.</div>
+        : <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:8}}>
+            {assetPhotos.map(p => (
+              <div key={p.id} style={{position:"relative",borderRadius:8,overflow:"hidden",border:p.is_primary?"2px solid #f97316":"2px solid #222226",cursor:"pointer"}}
+                onClick={()=>!p.is_primary && setPrimary(p)}>
+                <img src={p.url} alt="" style={{width:"100%",height:80,objectFit:"contain",background:"#1a1a1e",display:"block",padding:3}} />
+                <div style={{position:"absolute",top:4,right:4,display:"flex",gap:3}}>
+                  {p.is_primary && <span style={{background:"#f97316",color:"#fff",fontSize:".55rem",fontWeight:700,padding:"2px 5px",borderRadius:4}}>PRIMARY</span>}
+                  <span style={{background:"#1a1a1f99",color:"#f87171",fontSize:".7rem",padding:"2px 6px",borderRadius:4,cursor:"pointer"}}
+                    onClick={e=>{e.stopPropagation();deletePhoto(p);}}>
+                    {deleting===p.id ? "…" : "✕"}
+                  </span>
+                </div>
+                {!p.is_primary && <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#0008",color:"#9ca3af",fontSize:".6rem",textAlign:"center",padding:"3px 0"}}>Set Primary</div>}
+              </div>
+            ))}
+          </div>
+      }
+    </div>
+  );
+}
+
 // ── Retire Modal ──────────────────────────────────────────────────────────────
 function RetireModal({ type, asset, onRetire }) {
   const [open, setOpen]           = useState(false);
@@ -2532,6 +2651,7 @@ export default function App() {
   const [showRetired, setShowRetired] = useState(false);
   const [tab,         setTab]         = useState("schedule");
   const [savingPhoto, setSavingPhoto] = useState(false);
+  const [allPhotos,   setAllPhotos]   = useState([]);
 
   // Add vehicle form
   const [addForm,  setAddForm]  = useState({ name:"", make:"Jeep Gladiator", year:"", odometer:"", vin:"", purchasePrice:"", purchaseDate:"" });
@@ -2595,6 +2715,11 @@ export default function App() {
   (Array.isArray(rideAssignments) ? rideAssignments : []).forEach(r => { rideMap[r.ride_key] = r.asset_id; });
 
   // ── Load all data from Supabase ─────────────────────────────────────────────
+  // Expose jwt/uid to child components that need direct storage access
+  useEffect(() => {
+    if (jwt) { window._maintrJwt = jwt; window._maintrUid = uid; }
+  }, [jwt, uid]);
+
   async function loadAll() {
     if (!jwt) return;
     setLoading(true);
@@ -2633,6 +2758,7 @@ export default function App() {
         photosRes.forEach(p => {
           if (p.is_primary || !pm[p.asset_id]) pm[p.asset_id] = p.url;
         });
+        setAllPhotos(photosRes);
       }
       setPhotos(pm);
     } catch(e) {
@@ -2894,14 +3020,21 @@ export default function App() {
   // Photos
   async function savePhoto(assetId, dataUrl) {
     setSavingPhoto(true);
-    const ext  = dataUrl.startsWith("data:image/png") ? "png" : "jpg";
-    const path = `${assetId}/primary.${ext}`;
-    const url  = await uploadPhoto(path, dataUrl, jwt);
-    if (url) {
-      // Upsert photo record
-      const existing = Object.entries(photos).find(([k]) => k === assetId);
-      const r = await sbFetch("POST", "photos", { asset_id: assetId, user_id: uid, storage_path: path, url, is_primary: true }, jwt);
-      setPhotos(prev => ({ ...prev, [assetId]: url }));
+    try {
+      const ext  = dataUrl.startsWith("data:image/png") ? "png" : "jpg";
+      const path = `${assetId}/primary.${ext}`;
+      const url  = await uploadPhoto(path, dataUrl, jwt);
+      if (url) {
+        // Delete existing primary photo record then insert new one
+        await sbFetch("DELETE", `photos?asset_id=eq.${assetId}&is_primary=eq.true`, null, jwt);
+        const pr = await sbFetch("POST", "photos", { asset_id: assetId, user_id: uid, storage_path: path, url, is_primary: true }, jwt);
+        setPhotos(prev => ({ ...prev, [assetId]: url }));
+        if (pr.ok && pr.data?.[0]) setAllPhotos(prev => [...prev.filter(p => !(p.asset_id===assetId && p.is_primary)), pr.data[0]]);
+      } else {
+        console.error("Photo upload returned null for", assetId);
+      }
+    } catch(e) {
+      console.error("savePhoto error:", e);
     }
     setSavingPhoto(false);
   }
@@ -2919,6 +3052,16 @@ export default function App() {
   }
 
   // ── Navigation helpers ──────────────────────────────────────────────────────
+  async function refreshPhotos() {
+    const photosRes = await sbQ("photos?order=created_at", jwt);
+    if (Array.isArray(photosRes)) {
+      setAllPhotos(photosRes);
+      const pm = { ...DEFAULT_PHOTOS };
+      photosRes.forEach(p => { if (p.is_primary || !pm[p.asset_id]) pm[p.asset_id] = p.url; });
+      setPhotos(pm);
+    }
+  }
+
   function goVeh(id)  { setSelId(id);      setTab("schedule"); setView("vehicle"); }
   function goBike(id) { setSelBikeId(id);  setTab("stats");    setView("bike");    }
   function goHome(id) { setHomePropId(id); setTab("tasks");    setView("home");    }
@@ -3197,7 +3340,7 @@ export default function App() {
 
                 {/* Tabs */}
                 <div className="tabs">
-                  {[{k:"schedule",l:"📋 Schedule"},{k:"history",l:`📜 History (${logs.length})`},{k:"fuel",l:"⛽ Fuel"},{k:"costs",l:"💰 Costs"},{k:"valuation",l:"📈 Values"}].map(t=>(
+                  {[{k:"schedule",l:"📋 Schedule"},{k:"history",l:`📜 History (${logs.length})`},{k:"fuel",l:"⛽ Fuel"},{k:"costs",l:"💰 Costs"},{k:"valuation",l:"📈 Values"},{k:"gallery",l:"📸 Photos"}].map(t=>(
                     <button key={t.k} className={`tab${tab===t.k?" on":""}`} onClick={()=>setTab(t.k)}>{t.l}</button>
                   ))}
                 </div>
@@ -3289,6 +3432,18 @@ export default function App() {
                     purchase_date:  updates.purchaseDate,
                   })} />
                 )}
+
+                {/* Gallery */}
+                {tab==="gallery" && (
+                  <PhotoGallery
+                    assetId={selVeh.id}
+                    photos={photosMap}
+                    allPhotos={allPhotos}
+                    jwt={jwt}
+                    uid={uid}
+                    onPrimaryChange={refreshPhotos}
+                  />
+                )}
               </>
             );
           })()}
@@ -3306,6 +3461,7 @@ export default function App() {
                 bike={bb}
                 bikeLogs={bLogsLegacy}
                 bikePhoto={photosMap[selBike.id]}
+                allPhotos={allPhotos}
                 bikeComponents={(bikeCompsByAsset[selBike.id]||[]).map(asBikeComp)}
                 rideAssignments={rideMap}
                 onLogItem={(key, entry) => {
@@ -3324,6 +3480,7 @@ export default function App() {
                 onSavePhoto={dataUrl => savePhoto(selBike.id, dataUrl)}
                 onAddComponent={(id, entry) => addBikeComponent(selBike.id, entry)}
                 onAssignRide={(key, assetId) => assignRide(key, assetId)}
+                onRefreshPhotos={refreshPhotos}
                 onBack={goBack}
               />
             );
