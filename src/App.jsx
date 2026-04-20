@@ -1811,7 +1811,7 @@ function HomeDetail({ property, items, homeLogs, onLogItem, onAddItem, onUpdateI
 
 
 // ── Bike detail view ──────────────────────────────────────────────────────────
-function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, bikeComponents, rideAssignments, onLogItem, onUpdateBike, onSavePhoto, onAddComponent, onAssignRide, onRefreshPhotos, onBack }) {
+function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: bikeUid, bikeComponents, rideAssignments, onLogItem, onUpdateBike, onSavePhoto, onAddComponent, onAssignRide, onRefreshPhotos, onBack }) {
   const [tab, setTab]               = useState("stats");
   const [showLogFor, setShowLogFor] = useState(null);
   const [logForm, setLogForm]       = useState({ date:"", miles:"", cost:"", notes:"" });
@@ -2154,8 +2154,8 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, bikeComponents, ride
           assetId={bike.id}
           photos={{[bike.id]: bikePhoto}}
           allPhotos={allPhotos||[]}
-          jwt={window._maintrJwt||""}
-          uid={window._maintrUid||""}
+          jwt={bikeJwt||""}
+          uid={bikeUid||""}
           onPrimaryChange={onRefreshPhotos||(() => {})}
         />
       )}
@@ -2715,11 +2715,6 @@ export default function App() {
   (Array.isArray(rideAssignments) ? rideAssignments : []).forEach(r => { rideMap[r.ride_key] = r.asset_id; });
 
   // ── Load all data from Supabase ─────────────────────────────────────────────
-  // Expose jwt/uid to child components that need direct storage access
-  useEffect(() => {
-    if (jwt) { window._maintrJwt = jwt; window._maintrUid = uid; }
-  }, [jwt, uid]);
-
   async function loadAll() {
     if (!jwt) return;
     setLoading(true);
@@ -3462,6 +3457,8 @@ export default function App() {
                 bikeLogs={bLogsLegacy}
                 bikePhoto={photosMap[selBike.id]}
                 allPhotos={allPhotos}
+                jwt={jwt}
+                uid={uid}
                 bikeComponents={(bikeCompsByAsset[selBike.id]||[]).map(asBikeComp)}
                 rideAssignments={rideMap}
                 onLogItem={(key, entry) => {
