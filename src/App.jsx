@@ -2490,46 +2490,67 @@ function CategoryManager({ customCats, onSave }) {
 
 // ── Photo Gallery (Feature 1 + 2) ────────────────────────────────────────────
 function PhotoGallery({ assetId, photos, allPhotos, jwt, uid, onPrimaryChange }) {
-  const [uploading, setUploading]   = useState(false);
-  const [deleting,  setDeleting]    = useState(null);
-  const fileRef = useRef(null);
+  const [uploading,  setUploading]  = useState(false);
+  const [uploadCount,setUploadCount]= useState({done:0,total:0});
+  const [deleting,   setDeleting]   = useState(null);
+  const [dragging,   setDragging]   = useState(false);
+  const fileRef  = useRef(null);
+  const dropRef  = useRef(null);
 
   const assetPhotos = allPhotos.filter(p => p.asset_id === assetId)
                                .sort((a,b) => b.is_primary - a.is_primary);
 
-  async function handleUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    const reader = new FileReader();
-    reader.onload = async ev => {
-      const dataUrl = ev.target.result;
-      const ext  = file.type === "image/png" ? "png" : "jpg";
-      const path = `${assetId}/${Date.now()}.${ext}`;
-      const [header, b64] = dataUrl.split(",");
-      const mime  = header.match(/:(.*?);/)[1];
-      const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-      const res = await fetch(`${SUPABASE_URL}/storage/v1/object/photos/${path}`, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${jwt}`, "apikey": SUPABASE_ANON, "Content-Type": mime, "x-upsert": "true" },
-        body: bytes,
-      });
-      if (res.ok) {
-        const url = `${SUPABASE_URL}/storage/v1/object/public/photos/${path}`;
-        const isPrimary = assetPhotos.length === 0;
-        const r = await sbFetch("POST", "photos", { asset_id: assetId, user_id: uid, storage_path: path, url, is_primary: isPrimary }, jwt);
-        if (r.ok) onPrimaryChange();
-      }
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    };
-    reader.readAsDataURL(file);
+  async function uploadFile(file, isPrimary) {
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = async ev => {
+        const dataUrl = ev.target.result;
+        const mime  = file.type || "image/jpeg";
+        const ext   = mime === "image/png" ? "png" : "jpg";
+        const path  = `${assetId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const [, b64] = dataUrl.split(",");
+        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        const res = await fetch(`${SUPABASE_URL}/storage/v1/object/photos/${path}`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${jwt}`, "apikey": SUPABASE_ANON, "Content-Type": mime, "x-upsert": "true" },
+          body: bytes,
+        });
+        if (res.ok) {
+          const url = `${SUPABASE_URL}/storage/v1/object/public/photos/${path}`;
+          await sbFetch("POST", "photos", { asset_id: assetId, user_id: uid, storage_path: path, url, is_primary: isPrimary }, jwt);
+        }
+        resolve(res.ok);
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
+  async function handleFiles(files) {
+    if (!files || files.length === 0) return;
+    const fileArr = Array.from(files).filter(f => f.type.startsWith("image/"));
+    if (fileArr.length === 0) return;
+    setUploading(true);
+    setUploadCount({ done: 0, total: fileArr.length });
+    const currentCount = assetPhotos.length;
+    for (let i = 0; i < fileArr.length; i++) {
+      const isPrimary = currentCount === 0 && i === 0;
+      await uploadFile(fileArr[i], isPrimary);
+      setUploadCount({ done: i + 1, total: fileArr.length });
+    }
+    setUploading(false);
+    setUploadCount({ done: 0, total: 0 });
+    if (fileRef.current) fileRef.current.value = "";
+    onPrimaryChange();
+  }
+
+  function onFileInput(e) { handleFiles(e.target.files); }
+
+  function onDragOver(e)  { e.preventDefault(); setDragging(true); }
+  function onDragLeave(e) { setDragging(false); }
+  function onDrop(e)      { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); }
+
   async function setPrimary(photo) {
-    // Clear existing primary
     await sbFetch("PATCH", `photos?asset_id=eq.${assetId}`, { is_primary: false }, jwt);
-    // Set new primary
     await sbFetch("PATCH", `photos?id=eq.${photo.id}`, { is_primary: true }, jwt);
     onPrimaryChange();
   }
@@ -2537,12 +2558,10 @@ function PhotoGallery({ assetId, photos, allPhotos, jwt, uid, onPrimaryChange })
   async function deletePhoto(photo) {
     if (!confirm("Delete this photo?")) return;
     setDeleting(photo.id);
-    // Delete from storage
     await fetch(`${SUPABASE_URL}/storage/v1/object/photos/${photo.storage_path}`, {
       method: "DELETE",
       headers: { "Authorization": `Bearer ${jwt}`, "apikey": SUPABASE_ANON },
     });
-    // Delete from DB
     await sbFetch("DELETE", `photos?id=eq.${photo.id}`, null, jwt);
     onPrimaryChange();
     setDeleting(null);
@@ -2550,29 +2569,63 @@ function PhotoGallery({ assetId, photos, allPhotos, jwt, uid, onPrimaryChange })
 
   return (
     <div style={{marginTop:16}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-        <div style={{fontSize:".72rem",color:"#6b7280",textTransform:"uppercase",letterSpacing:".07em"}}>Photos ({assetPhotos.length})</div>
-        <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          {uploading && <span style={{fontSize:".72rem",color:"#f97316"}}>Uploading…</span>}
-          <input ref={fileRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleUpload} />
-          <button className="btn btn-g btn-sm" style={{fontSize:".72rem"}} onClick={()=>fileRef.current?.click()}>+ Add Photo</button>
-        </div>
+      {/* Drop zone */}
+      <div ref={dropRef}
+        onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
+        onClick={()=>fileRef.current?.click()}
+        style={{
+          border:`2px dashed ${dragging?"#f97316":"#2a2a2e"}`,
+          borderRadius:10, padding:"20px 16px", textAlign:"center",
+          cursor:"pointer", marginBottom:14, transition:"all .15s",
+          background: dragging?"#f9731608":"transparent",
+        }}>
+        <input ref={fileRef} type="file" accept="image/*" multiple style={{display:"none"}} onChange={onFileInput} />
+        {uploading
+          ? <div style={{color:"#f97316",fontSize:".85rem",fontWeight:500}}>
+              Uploading {uploadCount.done} of {uploadCount.total}…
+              <div style={{background:"#1e1e22",borderRadius:99,height:4,marginTop:8,overflow:"hidden"}}>
+                <div style={{height:"100%",background:"#f97316",borderRadius:99,width:`${uploadCount.total?Math.round(uploadCount.done/uploadCount.total*100):0}%`,transition:"width .2s"}} />
+              </div>
+            </div>
+          : <div>
+              <div style={{fontSize:"1.4rem",marginBottom:6}}>📸</div>
+              <div style={{fontSize:".84rem",fontWeight:500,color:"#e8e6e1"}}>Drop photos here or click to browse</div>
+              <div style={{fontSize:".72rem",color:"#6b7280",marginTop:3}}>Select multiple files at once · JPG, PNG supported</div>
+            </div>
+        }
       </div>
+
+      {/* Photo grid */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+        <div style={{fontSize:".72rem",color:"#6b7280",textTransform:"uppercase",letterSpacing:".07em"}}>
+          {assetPhotos.length} {assetPhotos.length===1?"Photo":"Photos"}
+        </div>
+        {assetPhotos.length>0 && <div style={{fontSize:".68rem",color:"#4b5563"}}>Click photo to set as primary</div>}
+      </div>
+
       {assetPhotos.length === 0
-        ? <div style={{color:"#4b5563",fontSize:".8rem",padding:"8px 0"}}>No photos yet. Click + Add Photo to upload.</div>
-        : <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:8}}>
+        ? <div style={{color:"#4b5563",fontSize:".8rem",padding:"4px 0"}}>No photos yet.</div>
+        : <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
             {assetPhotos.map(p => (
-              <div key={p.id} style={{position:"relative",borderRadius:8,overflow:"hidden",border:p.is_primary?"2px solid #f97316":"2px solid #222226",cursor:"pointer"}}
+              <div key={p.id}
+                style={{position:"relative",borderRadius:8,overflow:"hidden",
+                  border:p.is_primary?"2px solid #f97316":"2px solid #222226",
+                  cursor:p.is_primary?"default":"pointer",transition:"border-color .15s"}}
                 onClick={()=>!p.is_primary && setPrimary(p)}>
-                <img src={p.url} alt="" style={{width:"100%",height:80,objectFit:"contain",background:"#1a1a1e",display:"block",padding:3}} />
+                <img src={p.url} alt=""
+                  style={{width:"100%",height:90,objectFit:"contain",background:"#1a1a1e",display:"block",padding:4}} />
                 <div style={{position:"absolute",top:4,right:4,display:"flex",gap:3}}>
-                  {p.is_primary && <span style={{background:"#f97316",color:"#fff",fontSize:".55rem",fontWeight:700,padding:"2px 5px",borderRadius:4}}>PRIMARY</span>}
-                  <span style={{background:"#1a1a1f99",color:"#f87171",fontSize:".7rem",padding:"2px 6px",borderRadius:4,cursor:"pointer"}}
+                  {p.is_primary && <span style={{background:"#f97316",color:"#fff",fontSize:".55rem",fontWeight:700,padding:"2px 5px",borderRadius:4,letterSpacing:".04em"}}>PRIMARY</span>}
+                  <span style={{background:"#000a",color:"#f87171",fontSize:".7rem",padding:"2px 6px",borderRadius:4,cursor:"pointer",lineHeight:1.4}}
                     onClick={e=>{e.stopPropagation();deletePhoto(p);}}>
                     {deleting===p.id ? "…" : "✕"}
                   </span>
                 </div>
-                {!p.is_primary && <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#0008",color:"#9ca3af",fontSize:".6rem",textAlign:"center",padding:"3px 0"}}>Set Primary</div>}
+                {!p.is_primary && (
+                  <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#0009",color:"#d1d5db",fontSize:".62rem",textAlign:"center",padding:"4px 0"}}>
+                    Set Primary
+                  </div>
+                )}
               </div>
             ))}
           </div>
