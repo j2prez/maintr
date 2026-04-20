@@ -2628,6 +2628,13 @@ export default function App() {
   const [authForm, setAuthForm] = useState({ email:"", password:"", name:"" });
   const [authErr,  setAuthErr]  = useState("");
   const [authBusy, setAuthBusy] = useState(false);
+  const [resetMode, setResetMode] = useState(() => {
+    // Detect if this is a password recovery redirect from Supabase
+    const hash = window.location.hash;
+    return hash.includes("type=recovery") || hash.includes("type=signup");
+  });
+  const [newPassword, setNewPassword] = useState("");
+  const [resetDone,   setResetDone]   = useState(false);
 
   // ── App data state ──────────────────────────────────────────────────────────
   const [loading,  setLoading]  = useState(false);
@@ -2789,6 +2796,43 @@ export default function App() {
     setAuthBusy(false);
   }
 
+  async function handlePasswordReset() {
+    if (!newPassword || newPassword.length < 6) {
+      setAuthErr("Password must be at least 6 characters.");
+      return;
+    }
+    setAuthBusy(true); setAuthErr("");
+    try {
+      // Extract access token from URL hash
+      const hash   = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
+      const token  = params.get("access_token");
+      if (!token) { setAuthErr("No reset token found in URL."); setAuthBusy(false); return; }
+
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON,
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setResetDone(true);
+        setResetMode(false);
+        // Clear the hash from URL
+        window.history.replaceState(null, "", window.location.pathname);
+      } else {
+        setAuthErr(data.message || data.error_description || "Reset failed.");
+      }
+    } catch(e) {
+      setAuthErr("Error: " + e.message);
+    }
+    setAuthBusy(false);
+  }
+
   async function handleSignOut() {
     await sbSignOut(jwt);
     saveSession(null);
@@ -2799,6 +2843,38 @@ export default function App() {
   }
 
   // ── Auth screen ─────────────────────────────────────────────────────────────
+  // ── Password reset screen ───────────────────────────────────────────────────
+  if (resetMode) {
+    return (
+      <>
+        <style>{CSS}</style>
+        <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+          <div style={{width:"100%",maxWidth:400}}>
+            <div style={{textAlign:"center",marginBottom:32}}>
+              <div className="logo" style={{fontSize:"2.2rem",letterSpacing:".12em"}}>MAIN<span>TR</span></div>
+            </div>
+            <div style={{background:"#141416",border:"1px solid #222226",borderRadius:14,padding:28}}>
+              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.1rem",letterSpacing:".08em",marginBottom:6}}>Set New Password</div>
+              <div style={{fontSize:".8rem",color:"#6b7280",marginBottom:18}}>Choose a new password for your Maintr account.</div>
+              <div className="field">
+                <label>New Password</label>
+                <input type="password" placeholder="At least 6 characters" value={newPassword}
+                  onChange={e=>setNewPassword(e.target.value)}
+                  onKeyDown={e=>e.key==="Enter"&&handlePasswordReset()} autoFocus />
+              </div>
+              {resetDone && <div style={{color:"#34d399",fontSize:".82rem",marginBottom:12,background:"#0a2a1e",border:"1px solid #34d39944",borderRadius:7,padding:"8px 12px"}}>Password updated! Sign in with your new password.</div>}
+              {authErr && <div style={{color:"#f87171",fontSize:".82rem",marginBottom:12,background:"#3a101022",border:"1px solid #f8717144",borderRadius:7,padding:"8px 12px"}}>{authErr}</div>}
+              <button className="btn btn-p" style={{width:"100%",padding:"11px 0",fontSize:".95rem"}}
+                onClick={handlePasswordReset} disabled={authBusy}>
+                {authBusy ? "Saving…" : "Set Password"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   if (!session) {
     return (
       <>
