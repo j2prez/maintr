@@ -1602,6 +1602,7 @@ function HomeDetail({ property, items, homeLogs, homeAssets, onLogItem, onAddIte
   const [logForm, setLogForm]   = useState({ date:"", cost:"", notes:"" });
   const [addForm, setAddForm]   = useState({ label:"", category:"general", intervalDays:"90", notes:"" });
   const [showAdd, setShowAdd]   = useState(false);
+  const [showRetiredHomeAssets, setShowRetiredHomeAssets] = useState(false);
 
   function submitLog() {
     if (!logForm.date) return;
@@ -1854,7 +1855,7 @@ function HomeDetail({ property, items, homeLogs, homeAssets, onLogItem, onAddIte
 
 
 // ── Bike detail view ──────────────────────────────────────────────────────────
-function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: bikeUid, bikeComponents, rideAssignments, onLogItem, onUpdateBike, onSavePhoto, onAddComponent, onAssignRide, onRefreshPhotos, onBack }) {
+function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: bikeUid, bikeComponents, rideAssignments, onLogItem, onUpdateBike, onSavePhoto, onAddComponent, onAssignRide, onRefreshPhotos, onRetire, onRestore, onBack }) {
   const [tab, setTab]               = useState("stats");
   const [showLogFor, setShowLogFor] = useState(null);
   const [logForm, setLogForm]       = useState({ date:"", miles:"", cost:"", notes:"" });
@@ -1939,8 +1940,8 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
           {(bike.status||"active")==="active"
-            ? <RetireModal type="bike" asset={bike} onRetire={(sd,sp)=>onUpdateBike(bike.id,{status:"retired",soldDate:sd||null,soldPrice:sp||null})} />
-            : <button className="btn btn-g btn-sm" onClick={()=>onUpdateBike(bike.id,{status:"active",soldDate:null,soldPrice:null})}>↩ Restore</button>
+            ? <RetireModal type="bike" asset={bike} onRetire={(sd,sp)=>onRetire?onRetire(sd,sp):onUpdateBike(bike.id,{status:"retired",soldDate:sd||null,soldPrice:sp||null})} />
+            : <button className="btn btn-g btn-sm" onClick={()=>onRestore?onRestore():onUpdateBike(bike.id,{status:"active",soldDate:null,soldPrice:null})}>↩ Restore</button>
           }
         </div>
       </div>
@@ -2854,6 +2855,47 @@ function PhotoGallery({ assetId, photos, allPhotos, jwt, uid, onPrimaryChange })
 
 
 
+
+// ── Add Bike Form ─────────────────────────────────────────────────────────────
+function AddBikeForm({ onAdd, onCancel }) {
+  const [form, setForm] = useState({ name:"", subtype:"road", make:"", model:"", currentMiles:"0", purchaseYear:"", weight:"" });
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    if (!form.name) return;
+    setBusy(true);
+    await onAdd(form);
+    setBusy(false);
+  }
+
+  return (
+    <div className="add-form">
+      <div className="sec">Add Bike</div>
+      <div className="field-row">
+        <div className="field"><label>Name</label><input placeholder="e.g. Cervelo S3" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} autoFocus /></div>
+        <div className="field"><label>Type</label>
+          <select value={form.subtype} onChange={e=>setForm({...form,subtype:e.target.value})}>
+            {Object.entries(BIKE_CATS).map(([k,v])=>(<option key={k} value={k}>{v.icon} {v.label}</option>))}
+          </select>
+        </div>
+      </div>
+      <div className="field-row">
+        <div className="field"><label>Make</label><input placeholder="e.g. Cervelo" value={form.make} onChange={e=>setForm({...form,make:e.target.value})} /></div>
+        <div className="field"><label>Model</label><input placeholder="e.g. S3d Ultegra" value={form.model} onChange={e=>setForm({...form,model:e.target.value})} /></div>
+      </div>
+      <div className="field-row">
+        <div className="field"><label>Current Miles</label><input type="number" value={form.currentMiles} onChange={e=>setForm({...form,currentMiles:e.target.value})} /></div>
+        <div className="field"><label>Purchase Year</label><input type="number" placeholder="2023" value={form.purchaseYear} onChange={e=>setForm({...form,purchaseYear:e.target.value})} /></div>
+        <div className="field"><label>Weight (optional)</label><input placeholder="e.g. 18.0 lbs" value={form.weight} onChange={e=>setForm({...form,weight:e.target.value})} /></div>
+      </div>
+      <div className="btn-row">
+        <button className="btn btn-g" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-p" onClick={submit} disabled={busy}>{busy?"Adding…":"Add Bike"}</button>
+      </div>
+    </div>
+  );
+}
+
 // ── Add Home Asset Form ───────────────────────────────────────────────────────
 function AddHomeAssetForm({ onAdd }) {
   const [open, setOpen]   = useState(false);
@@ -3002,6 +3044,12 @@ function HomeAssetDetail({ asset, schedules, logs, allPhotos, jwt, uid, onLog, o
               <div style={{fontSize:".62rem",color:"#6b7280",textTransform:"uppercase",letterSpacing:".06em"}}>Warranty</div>
             </div>}
           </div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
+          {(asset.status||"active")==="active"
+            ? <RetireModal type="home_asset" asset={asset} onRetire={(sd,sp)=>onRetire&&onRetire(sd,sp)} />
+            : <button className="btn btn-g btn-sm" onClick={()=>onRestore&&onRestore()}>↩ Restore</button>
+          }
         </div>
       </div>
 
@@ -3193,7 +3241,7 @@ function RetireModal({ type, asset, onRetire }) {
   return (
     <div className="overlay" onClick={()=>setOpen(false)}>
       <div className="modal" onClick={e=>e.stopPropagation()}>
-        <div className="modal-title">Retire {type==="vehicle"?"Vehicle":"Bike"}</div>
+            <div className="modal-title">Retire {type==="vehicle"?"Vehicle":type==="bike"?"Bike":"Asset"}</div>
         <div style={{fontSize:".84rem",color:"#9ca3af",marginBottom:16}}>
           {asset.name || asset.model} will be marked as retired and hidden from the active dashboard.
         </div>
@@ -3252,7 +3300,8 @@ export default function App() {
   const [selBikeId,   setSelBikeId]   = useState(null);
   const [homePropId,  setHomePropId]  = useState(null);
   const [showRetired,    setShowRetired]    = useState(false);
-  const [selHomeAssetId, setSelHomeAssetId] = useState(null);
+  const [selHomeAssetId,  setSelHomeAssetId]  = useState(null);
+  const [showRetiredBikes,setShowRetiredBikes] = useState(false);
   const [tab,         setTab]         = useState("schedule");
   const [savingPhoto, setSavingPhoto] = useState(false);
   const [allPhotos,   setAllPhotos]   = useState([]);
@@ -3723,6 +3772,23 @@ export default function App() {
   }
 
   // Home
+  async function addBike(bikeData) {
+    const r = await sbFetch("POST", "assets", {
+      user_id: uid, type: "bike",
+      subtype: bikeData.subtype || "road",
+      name: bikeData.name, make: bikeData.make || null,
+      model: bikeData.model || null,
+      current_miles: bikeData.currentMiles ? parseInt(bikeData.currentMiles) : 0,
+      purchase_year: bikeData.purchaseYear || null,
+      weight: bikeData.weight || null,
+      status: "active",
+    }, jwt);
+    if (r.ok && r.data?.[0]) {
+      setAssets(prev => [...prev, r.data[0]]);
+      setView("dashboard");
+    }
+  }
+
   async function addHomeAsset(propId, asset) {
     const r = await sbFetch("POST", "assets", {
       user_id: uid, type: "home_asset", parent_id: propId,
@@ -3853,6 +3919,7 @@ export default function App() {
   function goHomeAsset(id) { setSelHomeAssetId(id);   setTab("schedule"); setView("home_asset"); }
   function goBack()        {
     if (view==="home_asset") { setView("home"); setSelHomeAssetId(null); return; }
+    if (view==="add_bike")   { setView("dashboard"); return; }
     setView("dashboard"); setSelId(null); setSelBikeId(null); setHomePropId(null); setSelHomeAssetId(null);
   }
 
@@ -3992,13 +4059,22 @@ export default function App() {
               </div>
 
               {/* Bikes */}
-              {bikes.length>0 && (
-                <>
+              <>
                   <div className="dash-section-hdr" style={{marginTop:28}}>
                     <div className="dash-section-title">🚴 Bikes</div>
+                    <div style={{display:"flex",gap:6}}>
+                      <button className="btn btn-g btn-sm" style={{fontSize:".7rem"}}
+                        onClick={()=>setShowRetiredBikes(!showRetiredBikes)}>
+                        {showRetiredBikes ? "Hide Retired" : "Show Retired"}
+                      </button>
+                      <button className="btn btn-p btn-sm" onClick={()=>setView("add_bike")}>+ Add</button>
+                    </div>
                   </div>
+                  {(showRetiredBikes ? bikes : bikes.filter(b=>(b.status||"active")==="active")).length === 0 && (
+                    <div style={{color:"#4b5563",fontSize:".86rem",padding:"12px 0"}}>No bikes yet. Add your first bike.</div>
+                  )}
                   <div className="grid">
-                    {bikes.filter(b => (b.status||"active")==="active").map(bike => {
+                    {(showRetiredBikes ? bikes : bikes.filter(b=>(b.status||"active")==="active")).map(bike => {
                       const bb = asBike(bike);
                       const cat = BIKE_CATS[bb.type] || BIKE_CATS.road;
                       // Build bikeLogs in legacy format for bikeAlerts
@@ -4019,9 +4095,14 @@ export default function App() {
                               <div className="bike-model">{bike.model}</div>
                               <div className="bike-miles"><strong>{(bb.currentMiles||0).toLocaleString()} mi</strong></div>
                               <div className="badges" style={{marginTop:7}}>
-                                {red.length>0    && <span className="badge br">⚠ {red.length} overdue</span>}
-                                {yellow.length>0 && <span className="badge by">⚡ {yellow.length} due soon</span>}
-                                {red.length===0 && yellow.length===0 && <span className="badge bg">✓ All good</span>}
+                                {(bike.status||"active")==="retired"
+                                  ? <span className="badge" style={{background:"#1e1e22",color:"#6b7280"}}>🔒 Retired</span>
+                                  : <>
+                                    {red.length>0    && <span className="badge br">⚠ {red.length} overdue</span>}
+                                    {yellow.length>0 && <span className="badge by">⚡ {yellow.length} due soon</span>}
+                                    {red.length===0 && yellow.length===0 && <span className="badge bg">✓ All good</span>}
+                                  </>
+                                }
                               </div>
                             </div>
                           </div>
@@ -4030,7 +4111,6 @@ export default function App() {
                     })}
                   </div>
                 </>
-              )}
 
               {/* Home */}
               {properties.length>0 && (
@@ -4066,6 +4146,11 @@ export default function App() {
                 </>
               )}
             </>
+          )}
+
+          {/* ── ADD BIKE ── */}
+          {view==="add_bike" && (
+            <AddBikeForm onAdd={addBike} onCancel={()=>setView("dashboard")} />
           )}
 
           {/* ── ADD VEHICLE ── */}
@@ -4286,6 +4371,8 @@ export default function App() {
                   if (updates.photo        !== undefined) { /* handled separately */ }
                   if (Object.keys(mapped).length) updateAsset(selBike.id, mapped);
                 }}
+                onRetire={(sd,sp) => retireAsset(selBike.id, sd, sp)}
+                onRestore={() => restoreAsset(selBike.id)}
                 onSavePhoto={dataUrl => savePhoto(selBike.id, dataUrl)}
                 onAddComponent={(id, entry) => addBikeComponent(selBike.id, entry)}
                 onAssignRide={(key, assetId) => assignRide(key, assetId)}
@@ -4313,6 +4400,8 @@ export default function App() {
                 onAddSchedule={addHomeAssetSchedule}
                 onUpdateAsset={updateAsset}
                 onRefreshPhotos={refreshPhotos}
+                onRetire={(sd,sp) => retireAsset(selHomeAssetId, sd, sp)}
+                onRestore={() => restoreAsset(selHomeAssetId)}
                 onBack={goBack}
               />
             );
