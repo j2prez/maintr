@@ -1109,6 +1109,15 @@ function fuelStats(fuelLogs) {
 // ── CSS ───────────────────────────────────────────────────────────────────────
 
 // ── Home maintenance helpers ──────────────────────────────────────────────────
+const HOME_ASSET_CATS = {
+  hvac:       { label:"HVAC",        icon:"🌡️",  color:"#60a5fa" },
+  plumbing:   { label:"Plumbing",    icon:"🚿",  color:"#34d399" },
+  appliance:  { label:"Appliance",   icon:"⚡",  color:"#a78bfa" },
+  mechanical: { label:"Mechanical",  icon:"⚙️",  color:"#f97316" },
+  equipment:  { label:"Equipment",   icon:"🔧",  color:"#fbbf24" },
+  general:    { label:"General",     icon:"🏠",  color:"#9ca3af" },
+};
+
 const HOME_CATS = {
   safety:   { label:"Safety",    color:"#ef4444", bg:"#3a1010", icon:"🔥" },
   hvac:     { label:"HVAC",      color:"#60a5fa", bg:"#0f1f3a", icon:"❄️" },
@@ -1587,8 +1596,8 @@ function FuelTab({ vehicleId, fuelLogs, onAdd }) {
 
 
 // ── Home detail view ──────────────────────────────────────────────────────────
-function HomeDetail({ property, items, homeLogs, onLogItem, onAddItem, onUpdateItem, onBack }) {
-  const [tab, setTab]           = useState("tasks");
+function HomeDetail({ property, items, homeLogs, homeAssets, onLogItem, onAddItem, onUpdateItem, onGoAsset, onAddAsset, onBack }) {
+  const [tab, setTab]           = useState("assets");
   const [showLogFor, setShowLogFor] = useState(null);
   const [logForm, setLogForm]   = useState({ date:"", cost:"", notes:"" });
   const [addForm, setAddForm]   = useState({ label:"", category:"general", intervalDays:"90", notes:"" });
@@ -1655,10 +1664,44 @@ function HomeDetail({ property, items, homeLogs, onLogItem, onAddItem, onUpdateI
 
       {/* Tabs */}
       <div className="tabs">
-        {[{key:"tasks",label:"📋 Tasks"},{key:"history",label:`📜 History (${allLogs.length})`},{key:"costs",label:"💰 Costs"}].map(t=>(
+        {[{key:"assets",label:`🏠 Assets (${(homeAssets||[]).length})`},{key:"tasks",label:"📋 Tasks"},{key:"history",label:`📜 History (${allLogs.length})`},{key:"costs",label:"💰 Costs"}].map(t=>(
           <button key={t.key} className={`tab${tab===t.key?" on":""}`} onClick={()=>setTab(t.key)}>{t.label}</button>
         ))}
       </div>
+
+      {/* ASSETS TAB */}
+      {tab==="assets" && (
+        <>
+          {(homeAssets||[]).length === 0
+            ? <div style={{color:"#4b5563",fontSize:".86rem",padding:"12px 0"}}>No home assets yet. Add one below.</div>
+            : <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+                {(homeAssets||[]).map(ha => {
+                  const cat = HOME_ASSET_CATS[ha.subtype] || HOME_ASSET_CATS.general;
+                  return (
+                    <div key={ha.id}
+                      onClick={()=>onGoAsset&&onGoAsset(ha.id)}
+                      style={{background:"#141416",border:"1px solid #222226",borderRadius:10,padding:"12px 14px",display:"flex",alignItems:"center",gap:12,cursor:"pointer",transition:"all .15s"}}
+                      onMouseEnter={e=>e.currentTarget.style.borderColor="#f97316"}
+                      onMouseLeave={e=>e.currentTarget.style.borderColor="#222226"}>
+                      <div style={{width:36,height:36,borderRadius:8,background:cat.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",flexShrink:0}}>
+                        {cat.icon}
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:600,fontSize:".88rem"}}>{ha.name}</div>
+                        <div style={{fontSize:".72rem",color:"#6b7280",marginTop:1}}>
+                          {ha.make?`${ha.make}${ha.model?` · ${ha.model}`:""} · `:""}
+                          <span style={{color:cat.color}}>{cat.label}</span>
+                        </div>
+                      </div>
+                      <div style={{color:"#4b5563",fontSize:"1rem"}}>›</div>
+                    </div>
+                  );
+                })}
+              </div>
+          }
+          <AddHomeAssetForm onAdd={async (asset) => { if(onAddAsset) await onAddAsset(asset); }} />
+        </>
+      )}
 
       {/* TASKS TAB */}
       {tab==="tasks" && (
@@ -2488,6 +2531,69 @@ function CategoryManager({ customCats, onSave }) {
 }
 
 
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+function Lightbox({ photos, startIndex, onClose }) {
+  const [idx, setIdx] = useState(startIndex||0);
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === "Escape")     onClose();
+      if (e.key === "ArrowRight") setIdx(i => Math.min(i+1, photos.length-1));
+      if (e.key === "ArrowLeft")  setIdx(i => Math.max(i-1, 0));
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [photos.length]);
+
+  if (!photos.length) return null;
+  const photo = photos[idx];
+
+  return (
+    <div onClick={onClose} style={{
+      position:"fixed",inset:0,background:"rgba(0,0,0,.93)",zIndex:9999,
+      display:"flex",alignItems:"center",justifyContent:"center",
+    }}>
+      <button onClick={onClose} style={{
+        position:"absolute",top:16,right:20,background:"none",border:"none",
+        color:"#e8e6e1",fontSize:"1.8rem",cursor:"pointer",lineHeight:1,zIndex:10000,
+      }}>✕</button>
+      <div style={{position:"absolute",top:20,left:"50%",transform:"translateX(-50%)",
+        color:"#9ca3af",fontSize:".82rem",letterSpacing:".06em"}}>
+        {idx+1} / {photos.length}
+      </div>
+      {idx > 0 && (
+        <button onClick={e=>{e.stopPropagation();setIdx(i=>i-1);}} style={{
+          position:"absolute",left:16,background:"#ffffff18",border:"1px solid #ffffff22",
+          color:"#e8e6e1",fontSize:"1.6rem",width:44,height:44,borderRadius:"50%",
+          cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",
+        }}>‹</button>
+      )}
+      <img src={photo.url} alt="" onClick={e=>e.stopPropagation()} style={{
+        maxWidth:"90vw",maxHeight:"85vh",objectFit:"contain",borderRadius:8,
+        boxShadow:"0 8px 40px rgba(0,0,0,.6)",
+      }} />
+      {idx < photos.length-1 && (
+        <button onClick={e=>{e.stopPropagation();setIdx(i=>i+1);}} style={{
+          position:"absolute",right:16,background:"#ffffff18",border:"1px solid #ffffff22",
+          color:"#e8e6e1",fontSize:"1.6rem",width:44,height:44,borderRadius:"50%",
+          cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",
+        }}>›</button>
+      )}
+      {photos.length > 1 && (
+        <div style={{position:"absolute",bottom:20,display:"flex",gap:6}}>
+          {photos.map((_,i) => (
+            <div key={i} onClick={e=>{e.stopPropagation();setIdx(i);}} style={{
+              width:i===idx?20:8,height:8,borderRadius:99,cursor:"pointer",transition:"all .2s",
+              background:i===idx?"#f97316":"#ffffff44",
+            }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Photo Gallery (Feature 1 + 2) ────────────────────────────────────────────
 function PhotoGallery({ assetId, photos, allPhotos, jwt, uid, onPrimaryChange }) {
   const [uploading,  setUploading]  = useState(false);
@@ -2629,8 +2735,341 @@ function PhotoGallery({ assetId, photos, allPhotos, jwt, uid, onPrimaryChange })
               </div>
             ))}
           </div>
+
+      {lightboxIdx !== null && (
+        <Lightbox
+          photos={assetPhotos}
+          startIndex={lightboxIdx}
+          onClose={()=>setLightboxIdx(null)}
+        />
+      )}
       }
     </div>
+  );
+}
+
+
+
+// ── Add Home Asset Form ───────────────────────────────────────────────────────
+function AddHomeAssetForm({ onAdd }) {
+  const [open, setOpen]   = useState(false);
+  const [form, setForm]   = useState({ name:"", subtype:"appliance", make:"", model:"", modelNumber:"", serialNumber:"", purchaseDate:"", warrantyExpires:"" });
+  const [busy, setBusy]   = useState(false);
+
+  async function submit() {
+    if (!form.name) return;
+    setBusy(true);
+    await onAdd(form);
+    setForm({ name:"", subtype:"appliance", make:"", model:"", modelNumber:"", serialNumber:"", purchaseDate:"", warrantyExpires:"" });
+    setOpen(false);
+    setBusy(false);
+  }
+
+  if (!open) return (
+    <button className="btn btn-g btn-sm" style={{marginTop:4}} onClick={()=>setOpen(true)}>+ Add Home Asset</button>
+  );
+
+  return (
+    <div className="add-home-form">
+      <div className="add-home-title">New Home Asset</div>
+      <div className="field-row">
+        <div className="field" style={{flex:2}}>
+          <label>Asset Name</label>
+          <input placeholder="e.g. Furnace, Dishwasher" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} autoFocus />
+        </div>
+        <div className="field">
+          <label>Category</label>
+          <select value={form.subtype} onChange={e=>setForm({...form,subtype:e.target.value})}>
+            {Object.entries(HOME_ASSET_CATS).map(([k,v])=>(
+              <option key={k} value={k}>{v.icon} {v.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="field-row">
+        <div className="field"><label>Make</label><input placeholder="e.g. Carrier, Whirlpool" value={form.make} onChange={e=>setForm({...form,make:e.target.value})} /></div>
+        <div className="field"><label>Model</label><input placeholder="e.g. WTW5000DW" value={form.model} onChange={e=>setForm({...form,model:e.target.value})} /></div>
+      </div>
+      <div className="field-row">
+        <div className="field"><label>Model Number</label><input value={form.modelNumber} onChange={e=>setForm({...form,modelNumber:e.target.value})} /></div>
+        <div className="field"><label>Serial Number</label><input value={form.serialNumber} onChange={e=>setForm({...form,serialNumber:e.target.value})} /></div>
+      </div>
+      <div className="field-row">
+        <div className="field"><label>Purchase Date</label><input type="date" value={form.purchaseDate} onChange={e=>setForm({...form,purchaseDate:e.target.value})} /></div>
+        <div className="field"><label>Warranty Expires</label><input type="date" value={form.warrantyExpires} onChange={e=>setForm({...form,warrantyExpires:e.target.value})} /></div>
+      </div>
+      <div style={{display:"flex",gap:8,marginTop:8}}>
+        <button className="btn btn-p btn-sm" onClick={submit} disabled={busy}>{busy?"Adding…":"Add Asset"}</button>
+        <button className="btn btn-g btn-sm" onClick={()=>setOpen(false)}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Home Asset Detail ─────────────────────────────────────────────────────────
+function HomeAssetDetail({ asset, schedules, logs, allPhotos, jwt, uid, onLog, onAddSchedule, onUpdateAsset, onRefreshPhotos, onBack }) {
+  const [tab,      setTab]      = useState("schedule");
+  const [showLog,  setShowLog]  = useState(null);
+  const [logForm,  setLogForm]  = useState({ date: new Date().toISOString().split("T")[0], cost:"", performedBy:"", location:"", notes:"" });
+  const [showSched,setShowSched]= useState(false);
+  const [schedForm,setSchedForm]= useState({ label:"", intervalDays:"90", anchorMonth:"", anchorDay:"" });
+  const [editing,  setEditing]  = useState(false);
+  const [editForm, setEditForm] = useState({
+    make: asset.make||"", model: asset.model||"",
+    modelNumber: asset.model_number||"", serialNumber: asset.serial_number||"",
+    purchaseDate: asset.purchase_date||"", warrantyExpires: asset.warranty_expires||"",
+    notes: asset.notes||"",
+  });
+
+  const cat      = HOME_ASSET_CATS[asset.subtype] || HOME_ASSET_CATS.general;
+  const assetLogs = logs.filter(l => l.asset_id === asset.id).sort((a,b) => b.date?.localeCompare(a.date||""));
+  const totalCost = assetLogs.reduce((s,l) => s+(l.cost||0), 0);
+
+  // Schedule with pct calculation using interval_days
+  function schedPct(sched) {
+    if (!sched.interval_days) return 0;
+    const lastDone = sched.last_done;
+    if (!lastDone) return 50; // unknown — show half
+    const daysSince = Math.floor((Date.now() - new Date(lastDone+"T00:00:00").getTime()) / 86400000);
+    return Math.min(100, Math.round((daysSince / sched.interval_days) * 100));
+  }
+  function schedLeft(sched) {
+    if (!sched.interval_days) return null;
+    if (!sched.last_done) return sched.interval_days;
+    const daysSince = Math.floor((Date.now() - new Date(sched.last_done+"T00:00:00").getTime()) / 86400000);
+    return Math.max(0, sched.interval_days - daysSince);
+  }
+  function schedDue(sched) {
+    const left = schedLeft(sched);
+    if (left === null) return "—";
+    if (left === 0) return "Overdue";
+    if (left <= 7)  return `${left}d`;
+    if (left <= 60) return `${left}d`;
+    return `${Math.round(left/30)}mo`;
+  }
+
+  function submitLog() {
+    if (!logForm.date) return;
+    onLog(asset.id, { ...logForm, serviceLabel: showLog, scheduleId: schedules.find(s=>s.label===showLog)?.id });
+    setLogForm({ date: new Date().toISOString().split("T")[0], cost:"", performedBy:"", location:"", notes:"" });
+    setShowLog(null);
+  }
+
+  function submitSched() {
+    if (!schedForm.label) return;
+    onAddSchedule(asset.id, schedForm.label, parseInt(schedForm.intervalDays)||90, schedForm.anchorMonth?parseInt(schedForm.anchorMonth):null, schedForm.anchorDay?parseInt(schedForm.anchorDay):null);
+    setSchedForm({ label:"", intervalDays:"90", anchorMonth:"", anchorDay:"" });
+    setShowSched(false);
+  }
+
+  return (
+    <>
+      {/* Header */}
+      <div className="det-hdr">
+        <div style={{width:52,height:52,borderRadius:10,background:cat.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.6rem",flexShrink:0}}>
+          {allPhotos?.filter(p=>p.asset_id===asset.id&&p.is_primary)[0]
+            ? <img src={allPhotos.filter(p=>p.asset_id===asset.id&&p.is_primary)[0].url} style={{width:52,height:52,objectFit:"cover",borderRadius:10}} />
+            : <span>{cat.icon}</span>
+          }
+        </div>
+        <div className="det-info">
+          <div className="det-title" style={{color:cat.color}}>{asset.name}</div>
+          <div className="det-sub" style={{marginTop:3}}>
+            <span style={{background:cat.color+"22",color:cat.color,fontSize:".7rem",fontWeight:600,padding:"2px 8px",borderRadius:99}}>{cat.label}</span>
+            {asset.make && <span style={{marginLeft:8,color:"#6b7280",fontSize:".75rem"}}>{asset.make}{asset.model?` · ${asset.model}`:""}</span>}
+          </div>
+          {(asset.serial_number||asset.model_number) && (
+            <div style={{fontSize:".72rem",color:"#4b5563",marginTop:4}}>
+              {asset.model_number && <span>Model: {asset.model_number}</span>}
+              {asset.serial_number && <span style={{marginLeft:8}}>S/N: {asset.serial_number}</span>}
+            </div>
+          )}
+          <div style={{display:"flex",gap:16,marginTop:8,flexWrap:"wrap"}}>
+            <div style={{textAlign:"center"}}>
+              <div style={{fontSize:".9rem",fontWeight:600}}>{schedules.length}</div>
+              <div style={{fontSize:".62rem",color:"#6b7280",textTransform:"uppercase",letterSpacing:".06em"}}>Service Items</div>
+            </div>
+            {totalCost>0 && <div style={{textAlign:"center"}}>
+              <div style={{fontSize:".9rem",fontWeight:600,color:"#34d399"}}>${totalCost.toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+              <div style={{fontSize:".62rem",color:"#6b7280",textTransform:"uppercase",letterSpacing:".06em"}}>Total Spent</div>
+            </div>}
+            {asset.warranty_expires && <div style={{textAlign:"center"}}>
+              <div style={{fontSize:".9rem",fontWeight:600,color:new Date(asset.warranty_expires)<new Date()?"#f87171":"#a78bfa"}}>{asset.warranty_expires}</div>
+              <div style={{fontSize:".62rem",color:"#6b7280",textTransform:"uppercase",letterSpacing:".06em"}}>Warranty</div>
+            </div>}
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="tabs">
+        {[{k:"schedule",l:"📋 Schedule"},{k:"history",l:`📜 History (${assetLogs.length})`},{k:"info",l:"ℹ️ Info"},{k:"gallery",l:"📸 Photos"}].map(t=>(
+          <button key={t.k} className={`tab${tab===t.k?" on":""}`} onClick={()=>setTab(t.k)}>{t.l}</button>
+        ))}
+      </div>
+
+      {/* SCHEDULE */}
+      {tab==="schedule" && (
+        <>
+          <div className="svc-list">
+            {schedules.length===0
+              ? <div style={{color:"#4b5563",fontSize:".86rem",padding:"12px 0"}}>No service items yet. Add one below.</div>
+              : schedules.map(sched => {
+                  const pct = schedPct(sched);
+                  const col = statusColor(pct);
+                  const due = schedDue(sched);
+                  return (
+                    <div key={sched.id} className="svc-row">
+                      <div className="svc-icon">🔧</div>
+                      <div className="svc-info">
+                        <div className="svc-lbl">{sched.label}</div>
+                        <div className="svc-det">
+                          Every {sched.interval_days}d
+                          {sched.anchor_month ? ` · Anchor: month ${sched.anchor_month}` : ""}
+                          {sched.last_done ? ` · Last: ${sched.last_done}` : " · No record"}
+                        </div>
+                      </div>
+                      <div className="bar-wrap">
+                        <div className="bar-bg"><div className="bar-fill" style={{width:`${pct}%`,background:col}} /></div>
+                        <div className="bar-pct" style={{color:col}}>{pct>=100?"OVERDUE":due}</div>
+                      </div>
+                      <button className="btn btn-g btn-sm" onClick={()=>setShowLog(sched.label)}>Log</button>
+                    </div>
+                  );
+                })
+            }
+          </div>
+          {!showSched
+            ? <button className="btn btn-g btn-sm" style={{marginTop:12}} onClick={()=>setShowSched(true)}>+ Add Service Item</button>
+            : <div className="add-home-form" style={{marginTop:12}}>
+                <div className="add-home-title">New Service Item</div>
+                <div className="field-row">
+                  <div className="field"><label>Service Label</label><input placeholder="e.g. Filter Replacement" value={schedForm.label} onChange={e=>setSchedForm({...schedForm,label:e.target.value})} autoFocus /></div>
+                  <div className="field"><label>Every (days)</label><input type="number" value={schedForm.intervalDays} onChange={e=>setSchedForm({...schedForm,intervalDays:e.target.value})} /></div>
+                </div>
+                <div className="field-row">
+                  <div className="field"><label>Anchor Month (optional)</label><input type="number" placeholder="1-12" value={schedForm.anchorMonth} onChange={e=>setSchedForm({...schedForm,anchorMonth:e.target.value})} /></div>
+                  <div className="field"><label>Anchor Day</label><input type="number" placeholder="1-31" value={schedForm.anchorDay} onChange={e=>setSchedForm({...schedForm,anchorDay:e.target.value})} /></div>
+                </div>
+                <div style={{display:"flex",gap:8,marginTop:6}}>
+                  <button className="btn btn-p btn-sm" onClick={submitSched}>Add</button>
+                  <button className="btn btn-g btn-sm" onClick={()=>setShowSched(false)}>Cancel</button>
+                </div>
+              </div>
+          }
+        </>
+      )}
+
+      {/* HISTORY */}
+      {tab==="history" && (
+        <>
+          <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
+            <button className="btn btn-p btn-sm" onClick={()=>setShowLog("General Service")}>+ Log Service</button>
+          </div>
+          {assetLogs.length===0
+            ? <div style={{color:"#4b5563",fontSize:".86rem",padding:"12px 0"}}>No history yet.</div>
+            : assetLogs.map(e => (
+                <div key={e.id} className="log-item">
+                  <div style={{flex:1}}>
+                    <div className="log-lbl">🔧 {e.service_label}</div>
+                    <div className="log-meta">
+                      {e.date}{e.performed_by?` · ${e.performed_by}`:""}{e.location?` · ${e.location}`:""}{e.notes?` · ${e.notes}`:""}
+                    </div>
+                  </div>
+                  <div className="log-cost">{e.cost?`$${parseFloat(e.cost).toFixed(2)}`:"—"}</div>
+                </div>
+              ))
+          }
+        </>
+      )}
+
+      {/* INFO */}
+      {tab==="info" && (
+        <>
+          {!editing
+            ? <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:4}}>
+                {[
+                  ["Make",            asset.make],
+                  ["Model",           asset.model],
+                  ["Model Number",    asset.model_number],
+                  ["Serial Number",   asset.serial_number],
+                  ["Purchase Date",   asset.purchase_date],
+                  ["Warranty Expires",asset.warranty_expires],
+                  ["Notes",           asset.notes],
+                ].filter(([,v])=>v).map(([label,val])=>(
+                  <div key={label} style={{display:"flex",gap:12,fontSize:".84rem"}}>
+                    <div style={{color:"#6b7280",width:130,flexShrink:0}}>{label}</div>
+                    <div style={{color:"#e8e6e1"}}>{val}</div>
+                  </div>
+                ))}
+                <button className="btn btn-g btn-sm" style={{marginTop:8,alignSelf:"flex-start"}} onClick={()=>setEditing(true)}>✏️ Edit Info</button>
+              </div>
+            : <div>
+                <div className="field-row">
+                  <div className="field"><label>Make</label><input value={editForm.make} onChange={e=>setEditForm({...editForm,make:e.target.value})} placeholder="e.g. Carrier" /></div>
+                  <div className="field"><label>Model</label><input value={editForm.model} onChange={e=>setEditForm({...editForm,model:e.target.value})} placeholder="e.g. 58CVA" /></div>
+                </div>
+                <div className="field-row">
+                  <div className="field"><label>Model Number</label><input value={editForm.modelNumber} onChange={e=>setEditForm({...editForm,modelNumber:e.target.value})} /></div>
+                  <div className="field"><label>Serial Number</label><input value={editForm.serialNumber} onChange={e=>setEditForm({...editForm,serialNumber:e.target.value})} /></div>
+                </div>
+                <div className="field-row">
+                  <div className="field"><label>Purchase Date</label><input type="date" value={editForm.purchaseDate} onChange={e=>setEditForm({...editForm,purchaseDate:e.target.value})} /></div>
+                  <div className="field"><label>Warranty Expires</label><input type="date" value={editForm.warrantyExpires} onChange={e=>setEditForm({...editForm,warrantyExpires:e.target.value})} /></div>
+                </div>
+                <div className="field"><label>Notes</label><input value={editForm.notes} onChange={e=>setEditForm({...editForm,notes:e.target.value})} /></div>
+                <div style={{display:"flex",gap:8,marginTop:10}}>
+                  <button className="btn btn-p btn-sm" onClick={()=>{
+                    onUpdateAsset(asset.id, {
+                      make: editForm.make||null, model: editForm.model||null,
+                      model_number: editForm.modelNumber||null, serial_number: editForm.serialNumber||null,
+                      purchase_date: editForm.purchaseDate||null, warranty_expires: editForm.warrantyExpires||null,
+                      notes: editForm.notes||null,
+                    });
+                    setEditing(false);
+                  }}>Save</button>
+                  <button className="btn btn-g btn-sm" onClick={()=>setEditing(false)}>Cancel</button>
+                </div>
+              </div>
+          }
+        </>
+      )}
+
+      {/* GALLERY */}
+      {tab==="gallery" && (
+        <PhotoGallery
+          assetId={asset.id}
+          photos={{}}
+          allPhotos={allPhotos||[]}
+          jwt={jwt||""}
+          uid={uid||""}
+          onPrimaryChange={onRefreshPhotos||(() => {})}
+        />
+      )}
+
+      {/* LOG MODAL */}
+      {showLog && (
+        <div className="overlay" onClick={()=>setShowLog(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div className="modal-title">Log Service</div>
+            <div style={{fontSize:".84rem",color:"#9ca3af",marginBottom:14}}>{showLog} — {asset.name}</div>
+            <div className="field-row">
+              <div className="field"><label>Date</label><input type="date" value={logForm.date} onChange={e=>setLogForm({...logForm,date:e.target.value})} /></div>
+              <div className="field"><label>Cost ($)</label><input type="number" step="0.01" placeholder="0.00" value={logForm.cost} onChange={e=>setLogForm({...logForm,cost:e.target.value})} /></div>
+            </div>
+            <div className="field-row">
+              <div className="field"><label>Performed By</label><input placeholder="e.g. HVAC Tech" value={logForm.performedBy} onChange={e=>setLogForm({...logForm,performedBy:e.target.value})} /></div>
+              <div className="field"><label>Location / Shop</label><input placeholder="e.g. Home, Service Co." value={logForm.location} onChange={e=>setLogForm({...logForm,location:e.target.value})} /></div>
+            </div>
+            <div className="field"><label>Notes</label><input placeholder="Details, brand, observations…" value={logForm.notes} onChange={e=>setLogForm({...logForm,notes:e.target.value})} /></div>
+            <div className="modal-btns">
+              <button className="btn btn-g" onClick={()=>setShowLog(null)}>Cancel</button>
+              <button className="btn btn-p" onClick={submitLog}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -2708,7 +3147,8 @@ export default function App() {
   const [selId,       setSelId]       = useState(null);
   const [selBikeId,   setSelBikeId]   = useState(null);
   const [homePropId,  setHomePropId]  = useState(null);
-  const [showRetired, setShowRetired] = useState(false);
+  const [showRetired,    setShowRetired]    = useState(false);
+  const [selHomeAssetId, setSelHomeAssetId] = useState(null);
   const [tab,         setTab]         = useState("schedule");
   const [savingPhoto, setSavingPhoto] = useState(false);
   const [allPhotos,   setAllPhotos]   = useState([]);
@@ -2765,6 +3205,13 @@ export default function App() {
   // Group homeLogs by item_id
   const homeLogsByItem = {};
   homeLogs.forEach(l => { if (!homeLogsByItem[l.item_id]) homeLogsByItem[l.item_id] = []; homeLogsByItem[l.item_id].push(l); });
+
+  // Home assets grouped by parent property id
+  const homeAssetsByParent = {};
+  assets.filter(a => a.type === "home_asset").forEach(a => {
+    if (!homeAssetsByParent[a.parent_id]) homeAssetsByParent[a.parent_id] = [];
+    homeAssetsByParent[a.parent_id].push(a);
+  });
 
   // Schedules by asset_id
   const schedByAsset = {};
@@ -3118,6 +3565,51 @@ export default function App() {
   }
 
   // Home
+  async function addHomeAsset(propId, asset) {
+    const r = await sbFetch("POST", "assets", {
+      user_id: uid, type: "home_asset", parent_id: propId,
+      subtype: asset.subtype||"general", name: asset.name,
+      make: asset.make||null, model: asset.model||null,
+      model_number: asset.modelNumber||null, serial_number: asset.serialNumber||null,
+      purchase_date: asset.purchaseDate||null, warranty_expires: asset.warrantyExpires||null,
+      notes: asset.notes||null, status: "active",
+    }, jwt);
+    if (r.ok && r.data?.[0]) {
+      setAssets(prev => [...prev, r.data[0]]);
+      return r.data[0];
+    }
+    return null;
+  }
+
+  async function addHomeAssetSchedule(assetId, label, intervalDays, anchorMonth, anchorDay) {
+    const r = await sbFetch("POST", "schedules", {
+      asset_id: assetId, user_id: uid, label,
+      interval_days: intervalDays||null,
+      anchor_month: anchorMonth||null,
+      anchor_day: anchorDay||null,
+    }, jwt);
+    if (r.ok) setSchedules(prev => [...prev, r.data[0]]);
+  }
+
+  async function logHomeAssetService(assetId, entry) {
+    const r = await sbFetch("POST", "service_logs", {
+      asset_id: assetId, user_id: uid,
+      service_label: entry.serviceLabel||entry.label,
+      category: entry.category||"preventative",
+      date: entry.date||new Date().toISOString().split("T")[0],
+      cost: entry.cost ? parseFloat(entry.cost) : null,
+      performed_by: entry.performedBy||null,
+      location: entry.location||null,
+      notes: entry.notes||null,
+    }, jwt);
+    if (r.ok) setSvcLogs(prev => [...prev, r.data[0]]);
+    // Update last_done on schedule item
+    if (entry.scheduleId) {
+      await sbFetch("PATCH", `schedules?id=eq.${entry.scheduleId}`, { last_done: entry.date }, jwt);
+      setSchedules(prev => prev.map(s => s.id===entry.scheduleId ? {...s, last_done: entry.date} : s));
+    }
+  }
+
   async function updateHomeItem(itemId, updates) {
     const mapped = {};
     if (updates.lastDone !== undefined) mapped.last_done = updates.lastDone;
@@ -3197,10 +3689,14 @@ export default function App() {
     }
   }
 
-  function goVeh(id)  { setSelId(id);      setTab("schedule"); setView("vehicle"); }
-  function goBike(id) { setSelBikeId(id);  setTab("stats");    setView("bike");    }
-  function goHome(id) { setHomePropId(id); setTab("tasks");    setView("home");    }
-  function goBack()   { setView("dashboard"); setSelId(null); setSelBikeId(null); setHomePropId(null); }
+  function goVeh(id)       { setSelId(id);           setTab("schedule"); setView("vehicle");    }
+  function goBike(id)      { setSelBikeId(id);       setTab("stats");    setView("bike");       }
+  function goHome(id)      { setHomePropId(id);       setTab("tasks");    setView("home");       setSelHomeAssetId(null); }
+  function goHomeAsset(id) { setSelHomeAssetId(id);   setTab("schedule"); setView("home_asset"); }
+  function goBack()        {
+    if (view==="home_asset") { setView("home"); setSelHomeAssetId(null); return; }
+    setView("dashboard"); setSelId(null); setSelBikeId(null); setHomePropId(null); setSelHomeAssetId(null);
+  }
 
   // ── Render ──────────────────────────────────────────────────────────────────
   const selVeh  = vehicles.find(v  => v.id === selId);
@@ -3226,6 +3722,16 @@ export default function App() {
   function asProp(a) {
     return { id: a.id, name: a.name, address: a.address, status: a.status };
   }
+  function asHomeAsset(a) {
+    return {
+      id: a.id, name: a.name, subtype: a.subtype||"general",
+      make: a.make, model: a.model, model_number: a.model_number,
+      serial_number: a.serial_number, purchase_date: a.purchase_date,
+      warranty_expires: a.warranty_expires, status: a.status||"active",
+      notes: a.notes,
+    };
+  }
+
   function asHomeItem(i) {
     return {
       id: i.id, label: i.label, category: i.category,
@@ -3623,6 +4129,29 @@ export default function App() {
             );
           })()}
 
+          {/* ── HOME ASSET DETAIL ── */}
+          {view==="home_asset" && selHomeAssetId && (()=>{
+            const ha = assets.find(a => a.id === selHomeAssetId);
+            if (!ha) return null;
+            const haSchedz = schedules.filter(s => s.asset_id === selHomeAssetId);
+            const haLogs   = svcLogs.filter(l => l.asset_id === selHomeAssetId);
+            return (
+              <HomeAssetDetail
+                asset={asHomeAsset(ha)}
+                schedules={haSchedz}
+                logs={haLogs}
+                allPhotos={allPhotos}
+                jwt={jwt}
+                uid={uid}
+                onLog={(assetId, entry) => logHomeAssetService(assetId, entry)}
+                onAddSchedule={addHomeAssetSchedule}
+                onUpdateAsset={updateAsset}
+                onRefreshPhotos={refreshPhotos}
+                onBack={goBack}
+              />
+            );
+          })()}
+
           {/* ── HOME DETAIL ── */}
           {view==="home" && selProp && (()=>{
             const p     = asProp(selProp);
@@ -3634,9 +4163,12 @@ export default function App() {
                 property={p}
                 items={items}
                 homeLogs={logsForProp}
+                homeAssets={(homeAssetsByParent[selProp.id]||[]).map(asHomeAsset)}
                 onLogItem={(itemId, entry) => logHomeItem(itemId, selProp.id, entry)}
                 onAddItem={item => addHomeItem(selProp.id, item)}
                 onUpdateItem={(itemId, updates) => updateHomeItem(itemId, updates)}
+                onGoAsset={goHomeAsset}
+                onAddAsset={async (asset) => { await addHomeAsset(selProp.id, asset); }}
               />
             );
           })()}
