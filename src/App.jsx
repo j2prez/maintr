@@ -2220,7 +2220,7 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
   const [editingBike, setEditingBike] = useState(false);
   const [showLogFor, setShowLogFor] = useState(null);
   const [logForm, setLogForm]       = useState({ date:"", miles:"", cost:"", notes:"" });
-  const [milesEdit, setMilesEdit]   = useState(bike.currentMiles.toString());
+  const [milesEdit, setMilesEdit]   = useState((bike.currentMiles||0).toString());
   const [showAddComp, setShowAddComp] = useState(false);
   const [compForm, setCompForm]     = useState({ date:new Date().toISOString().split("T")[0], name:"", cat:"drivetrain", maintItem:"", cost:"", notes:"" });
   const [rideFilter, setRideFilter] = useState("unassigned"); // "all" | "mine" | "unassigned"
@@ -2271,7 +2271,6 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
 
   // Ride filtering — combines regular Strava rides + e-bike rides
   const filteredRides = (() => {
-  const filteredRides = (() => {
     const allRegular = STRAVA_RIDES.map((r, idx) => ({
       key: String(idx), d: r.d, mi: r.mi, n: r.n, dur: r.dur, type: 'ride',
       assignedTo: rideAssignments[String(idx)] || null,
@@ -2280,6 +2279,7 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
       key: 'ebike-'+r[0], d: r[1], mi: r[2], n: r[3], type: 'ebike',
       assignedTo: rideAssignments['ebike-'+r[0]] || null,
     }));
+    return [...allRegular, ...allEbike].filter(r => {
       if (rideFilter === 'mine')       return r.assignedTo === bike.id;
       if (rideFilter === 'unassigned') return !r.assignedTo;
       return true;
@@ -2355,7 +2355,7 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
         <>
           <div className="stat-row">
             <div className="stat-pill">
-              <div className="stat-pill-val">{bike.currentMiles.toLocaleString()}</div>
+              <div className="stat-pill-val">{(bike.currentMiles||0).toLocaleString()}</div>
               <div className="stat-pill-lbl">Total Miles</div>
             </div>
             <div className="stat-pill">
@@ -2429,7 +2429,7 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
                   <div className="bar-pct" style={{color:col}}>{pct>=100?"OVERDUE":`${left.toLocaleString()} mi`}</div>
                 </div>
                 <button className="btn btn-g btn-sm" onClick={()=>{
-                  setLogForm({date:new Date().toISOString().split("T")[0], miles:bike.currentMiles.toString(), cost:"", notes:""});
+                  setLogForm({date:new Date().toISOString().split("T")[0], miles:(bike.currentMiles||0).toString(), cost:"", notes:""});
                   setShowLogFor(item.id);
                 }}>Log</button>
               </div>
@@ -2497,7 +2497,7 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
           }
           <div style={{marginTop:14}}>
             <button className="btn btn-p btn-sm" onClick={()=>{
-              setLogForm({date:new Date().toISOString().split("T")[0], miles:bike.currentMiles.toString(), cost:"", notes:""});
+              setLogForm({date:new Date().toISOString().split("T")[0], miles:(bike.currentMiles||0).toString(), cost:"", notes:""});
               setShowLogFor(BIKE_MAINT[0].id);
             }}>+ Log Service</button>
           </div>
