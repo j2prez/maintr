@@ -2237,12 +2237,30 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
 
 // ── Valuation tab ─────────────────────────────────────────────────────────────
 function ValuationTab({ vehicle, onUpdate }) {
-  const [editPrice, setEditPrice] = useState(vehicle.purchasePrice ? vehicle.purchasePrice.toString() : "");
-  const [editDate,  setEditDate]  = useState(vehicle.purchaseDate || "");
-  const [saving, setSaving]       = useState(false);
+  const [editPrice,  setEditPrice]  = useState(vehicle.purchasePrice ? vehicle.purchasePrice.toString() : "");
+  const [editDate,   setEditDate]   = useState(vehicle.purchaseDate || "");
+  const [saving,     setSaving]     = useState(false);
+  const [editValues, setEditValues] = useState(false);
+  const [mvForm,     setMvForm]     = useState({
+    tradeIn:      vehicle.marketValues?.tradeIn?.toString()      || "",
+    privateParty: vehicle.marketValues?.privateParty?.toString() || "",
+    asOf:         vehicle.marketValues?.asOf || new Date().toISOString().split("T")[0],
+    source:       vehicle.marketValues?.source || "KBB",
+  });
 
   const mv  = vehicle.marketValues;
   const pp  = vehicle.purchasePrice;
+
+  // Staleness check — warn after 90 days
+  const STALE_DAYS = 90;
+  const isStale = (() => {
+    if (!mv?.asOf) return true;
+    const days = Math.floor((Date.now() - new Date(mv.asOf + "T00:00:00").getTime()) / 86400000);
+    return days > STALE_DAYS;
+  })();
+  const daysSinceUpdate = mv?.asOf
+    ? Math.floor((Date.now() - new Date(mv.asOf + "T00:00:00").getTime()) / 86400000)
+    : null;
   const fmt = n => n == null ? "—" : `$${Number(n).toLocaleString("en-US", {minimumFractionDigits:0})}`;
   const dep = pp && mv ? pp - mv.privateParty : null;
   const depPct = pp && mv ? Math.round(((pp - mv.privateParty) / pp) * 100) : null;
@@ -2287,34 +2305,112 @@ function ValuationTab({ vehicle, onUpdate }) {
       </div>
 
       {/* Market Values */}
-      <div className="sec">Current Market Values <span style={{fontWeight:400,color:"#4b5563",fontSize:".65rem",letterSpacing:0,textTransform:"none"}}>(KBB "Good" condition · {mv?.asOf || "n/a"})</span></div>
-      {mv ? (
+      <div className="sec" style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <span>
+          Current Market Values
+          {mv?.asOf && <span style={{fontWeight:400,color:"#4b5563",fontSize:".65rem",letterSpacing:0,textTransform:"none",marginLeft:6}}>
+            · Updated {daysSinceUpdate === 0 ? "today" : `${daysSinceUpdate}d ago`}
+          </span>}
+        </span>
+        <button className="btn btn-g btn-sm" style={{fontSize:".7rem"}} onClick={()=>setEditValues(!editValues)}>
+          {editValues ? "Cancel" : mv ? "✏️ Update" : "+ Add Values"}
+        </button>
+      </div>
+
+      {/* Staleness warning */}
+      {isStale && !editValues && (
+        <div style={{background:"#3a2a0a",border:"1px solid #f59e0b44",borderRadius:8,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:"1rem"}}>⏰</span>
+          <div style={{flex:1}}>
+            <div style={{fontSize:".82rem",fontWeight:600,color:"#f59e0b"}}>
+              {mv ? `Values are ${daysSinceUpdate} days old` : "No market values on file"}
+            </div>
+            <div style={{fontSize:".72rem",color:"#9ca3af",marginTop:2}}>
+              {mv
+                ? `Last updated ${mv.asOf}. KBB recommends checking every 90 days.`
+                : "Add trade-in and private party values to track depreciation."}
+              {" "}Ask Claude for current KBB values anytime.
+            </div>
+          </div>
+          <button className="btn btn-p btn-sm" style={{fontSize:".72rem",flexShrink:0}} onClick={()=>setEditValues(true)}>
+            Update Now
+          </button>
+        </div>
+      )}
+
+      {/* Edit form */}
+      {editValues && (
+        <div style={{background:"#1a1a1f",border:"1px solid #2a2a2e",borderRadius:10,padding:"16px",marginBottom:14}}>
+          <div style={{fontSize:".8rem",color:"#9ca3af",marginBottom:12}}>
+            Enter current KBB values for <strong style={{color:"#e8e6e1"}}>{vehicle.name}</strong> ({vehicle.year} · {(vehicle.odometer||0).toLocaleString()} mi)
+          </div>
+          <div className="field-row">
+            <div className="field">
+              <label>Trade-In Value ($)</label>
+              <input type="number" placeholder="e.g. 12500" value={mvForm.tradeIn}
+                onChange={e=>setMvForm({...mvForm,tradeIn:e.target.value})} autoFocus />
+              <div style={{fontSize:".68rem",color:"#4b5563",marginTop:3}}>Dealer / CarMax estimate</div>
+            </div>
+            <div className="field">
+              <label>Private Party Value ($)</label>
+              <input type="number" placeholder="e.g. 15200" value={mvForm.privateParty}
+                onChange={e=>setMvForm({...mvForm,privateParty:e.target.value})} />
+              <div style={{fontSize:".68rem",color:"#4b5563",marginTop:3}}>Sell to individual</div>
+            </div>
+          </div>
+          <div className="field-row">
+            <div className="field">
+              <label>Source</label>
+              <select value={mvForm.source} onChange={e=>setMvForm({...mvForm,source:e.target.value})}>
+                <option value="KBB">KBB (Kelley Blue Book)</option>
+                <option value="Edmunds">Edmunds</option>
+                <option value="CarMax">CarMax Offer</option>
+                <option value="Carvana">Carvana Offer</option>
+                <option value="Manual">Manual Estimate</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>As Of Date</label>
+              <input type="date" value={mvForm.asOf} onChange={e=>setMvForm({...mvForm,asOf:e.target.value})} />
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8,marginTop:4}}>
+            <button className="btn btn-p btn-sm" onClick={()=>{
+              const updated = {
+                tradeIn:      mvForm.tradeIn      ? parseFloat(mvForm.tradeIn)      : null,
+                privateParty: mvForm.privateParty ? parseFloat(mvForm.privateParty) : null,
+                source:       mvForm.source,
+                asOf:         mvForm.asOf,
+              };
+              onUpdate({ marketValues: updated });
+              setEditValues(false);
+            }}>Save Values</button>
+            <button className="btn btn-g btn-sm" onClick={()=>setEditValues(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Current values display */}
+      {mv && !editValues && (
         <>
           <div className="stat-grid" style={{marginBottom:16}}>
             <div className="stat-card">
               <div className="stat-val" style={{color:"#f97316"}}>{fmt(mv.tradeIn)}</div>
               <div className="stat-lbl">Trade-In Value</div>
-              <div style={{fontSize:".68rem",color:"#4b5563",marginTop:3}}>Dealer estimate</div>
+              <div style={{fontSize:".68rem",color:"#4b5563",marginTop:3}}>{mv.source}</div>
             </div>
             <div className="stat-card">
               <div className="stat-val" style={{color:"#60a5fa"}}>{fmt(mv.privateParty)}</div>
               <div className="stat-lbl">Private Party</div>
               <div style={{fontSize:".68rem",color:"#4b5563",marginTop:3}}>Sell to individual</div>
             </div>
-            {pp && (
+            {pp && dep !== null && (
               <div className="stat-card">
                 <div className="stat-val" style={{color: dep > 0 ? "#ef4444" : "#22c55e"}}>
                   {dep > 0 ? `-${fmt(dep)}` : `+${fmt(Math.abs(dep))}`}
                 </div>
                 <div className="stat-lbl">Depreciation</div>
                 <div style={{fontSize:".68rem",color:"#4b5563",marginTop:3}}>{depPct}% from purchase</div>
-              </div>
-            )}
-            {pp && (
-              <div className="stat-card">
-                <div className="stat-val" style={{color:"#a78bfa"}}>{fmt(mv.privateParty)}</div>
-                <div className="stat-lbl">Current Value</div>
-                <div style={{fontSize:".68rem",color:"#4b5563",marginTop:3}}>vs {fmt(pp)} paid</div>
               </div>
             )}
           </div>
@@ -2340,14 +2436,14 @@ function ValuationTab({ vehicle, onUpdate }) {
               </div>
             </div>
           )}
-
           <div style={{fontSize:".7rem",color:"#4b5563",marginTop:6}}>
-            Source: {mv.source}. Values are estimates for "Good" condition and will vary by mileage, location, and options. 
-            <a href="https://www.kbb.com" target="_blank" rel="noopener noreferrer" style={{color:"#f97316",marginLeft:4}}>Get precise quote →</a>
+            {mv.source} · "Good" condition estimate · <a href="https://www.kbb.com" target="_blank" rel="noopener noreferrer" style={{color:"#f97316"}}>Get precise quote →</a>
           </div>
         </>
-      ) : (
-        <div style={{color:"#4b5563",fontSize:".86rem",padding:"12px 0"}}>No market value data on file. Values can be added manually.</div>
+      )}
+
+      {!mv && !editValues && (
+        <div style={{color:"#4b5563",fontSize:".86rem",padding:"8px 0"}}>No market values on file yet.</div>
       )}
     </>
   );
@@ -3771,6 +3867,7 @@ export default function App() {
       id: a.id, name: a.name, make: a.make, year: a.year, odometer: a.odometer,
       vin: a.vin, status: a.status, purchaseDate: a.purchase_date, purchasePrice: a.purchase_price,
       soldDate: a.sold_date, soldPrice: a.sold_price,
+      marketValues: a.meta?.marketValues || null,
       schedule: (schedByAsset[a.id]||[]).map(s => ({ id: s.id, label: s.label, miles: s.interval_miles })),
     };
   }
@@ -4130,10 +4227,17 @@ export default function App() {
 
                 {/* Valuation */}
                 {tab==="valuation" && (
-                  <ValuationTab vehicle={v} onUpdate={updates=>updateAsset(selVeh.id, {
-                    purchase_price: updates.purchasePrice,
-                    purchase_date:  updates.purchaseDate,
-                  })} />
+                  <ValuationTab vehicle={v} onUpdate={updates=>{
+                    const dbUpdates = {};
+                    if (updates.purchasePrice !== undefined) dbUpdates.purchase_price = updates.purchasePrice;
+                    if (updates.purchaseDate  !== undefined) dbUpdates.purchase_date  = updates.purchaseDate;
+                    if (updates.marketValues  !== undefined) {
+                      // Store in meta JSON column
+                      const currentMeta = assets.find(a=>a.id===selVeh.id)?.meta || {};
+                      dbUpdates.meta = { ...currentMeta, marketValues: updates.marketValues };
+                    }
+                    updateAsset(selVeh.id, dbUpdates);
+                  }} />
                 )}
 
                 {/* Gallery */}
