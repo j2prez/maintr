@@ -4288,6 +4288,12 @@ export default function App() {
                   if (updates.status       !== undefined) mapped.status        = updates.status;
                   if (updates.soldDate     !== undefined) mapped.sold_date     = updates.soldDate;
                   if (updates.soldPrice    !== undefined) mapped.sold_price    = updates.soldPrice;
+                  if (updates.subtype      !== undefined) mapped.subtype       = updates.subtype;
+                  if (updates.name         !== undefined) mapped.name          = updates.name;
+                  if (updates.make         !== undefined) mapped.make          = updates.make;
+                  if (updates.model        !== undefined) mapped.model         = updates.model;
+                  if (updates.weight       !== undefined) mapped.weight        = updates.weight;
+                  if (updates.purchase_year!== undefined) mapped.purchase_year = updates.purchase_year;
                   if (updates.photo        !== undefined) { /* handled separately */ }
                   if (Object.keys(mapped).length) updateAsset(selBike.id, mapped);
                 }}
