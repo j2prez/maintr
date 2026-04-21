@@ -2596,14 +2596,16 @@ function Lightbox({ photos, startIndex, onClose }) {
 
 // ── Photo Gallery (Feature 1 + 2) ────────────────────────────────────────────
 function PhotoGallery({ assetId, photos, allPhotos, jwt, uid, onPrimaryChange }) {
+  if (!assetId) return null;
   const [uploading,  setUploading]  = useState(false);
   const [uploadCount,setUploadCount]= useState({done:0,total:0});
   const [deleting,   setDeleting]   = useState(null);
   const [dragging,   setDragging]   = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState(null);
   const fileRef  = useRef(null);
   const dropRef  = useRef(null);
 
-  const assetPhotos = allPhotos.filter(p => p.asset_id === assetId)
+  const assetPhotos = (allPhotos||[]).filter(p => p.asset_id === assetId)
                                .sort((a,b) => b.is_primary - a.is_primary);
 
   async function uploadFile(file, isPrimary) {
@@ -2650,6 +2652,13 @@ function PhotoGallery({ assetId, photos, allPhotos, jwt, uid, onPrimaryChange })
   }
 
   function onFileInput(e) { handleFiles(e.target.files); }
+
+  // Guard: if no jwt, can't upload
+  if (!jwt) return (
+    <div style={{color:"#4b5563",fontSize:".84rem",padding:"16px 0",textAlign:"center"}}>
+      Sign out and back in to enable photo uploads.
+    </div>
+  );
 
   function onDragOver(e)  { e.preventDefault(); setDragging(true); }
   function onDragLeave(e) { setDragging(false); }
@@ -2716,8 +2725,8 @@ function PhotoGallery({ assetId, photos, allPhotos, jwt, uid, onPrimaryChange })
               <div key={p.id}
                 style={{position:"relative",borderRadius:8,overflow:"hidden",
                   border:p.is_primary?"2px solid #f97316":"2px solid #222226",
-                  cursor:p.is_primary?"default":"pointer",transition:"border-color .15s"}}
-                onClick={()=>!p.is_primary && setPrimary(p)}>
+                  cursor:"pointer",transition:"border-color .15s"}}
+                onClick={()=>setLightboxIdx(assetPhotos.indexOf(p))}>
                 <img src={p.url} alt=""
                   style={{width:"100%",height:90,objectFit:"contain",background:"#1a1a1e",display:"block",padding:4}} />
                 <div style={{position:"absolute",top:4,right:4,display:"flex",gap:3}}>
@@ -2728,8 +2737,8 @@ function PhotoGallery({ assetId, photos, allPhotos, jwt, uid, onPrimaryChange })
                   </span>
                 </div>
                 {!p.is_primary && (
-                  <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#0009",color:"#d1d5db",fontSize:".62rem",textAlign:"center",padding:"4px 0"}}>
-                    Set Primary
+                  <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#0009",color:"#d1d5db",fontSize:".62rem",textAlign:"center",padding:"4px 0"}}
+                    onClick={e=>{e.stopPropagation();setPrimary(p);}}>
                   </div>
                 )}
               </div>
@@ -2866,8 +2875,8 @@ function HomeAssetDetail({ asset, schedules, logs, allPhotos, jwt, uid, onLog, o
       {/* Header */}
       <div className="det-hdr">
         <div style={{width:52,height:52,borderRadius:10,background:cat.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.6rem",flexShrink:0}}>
-          {allPhotos?.filter(p=>p.asset_id===asset.id&&p.is_primary)[0]
-            ? <img src={allPhotos.filter(p=>p.asset_id===asset.id&&p.is_primary)[0].url} style={{width:52,height:52,objectFit:"cover",borderRadius:10}} />
+          {(allPhotos||[]).filter(p=>p.asset_id===asset.id&&p.is_primary)[0]
+            ? <img src={(allPhotos||[]).filter(p=>p.asset_id===asset.id&&p.is_primary)[0]?.url||''} style={{width:52,height:52,objectFit:"cover",borderRadius:10}} />
             : <span>{cat.icon}</span>
           }
         </div>
