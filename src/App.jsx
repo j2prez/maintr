@@ -163,11 +163,20 @@ async function fetchStravaSheet(sheetId) {
   try {
     const res  = await fetch(url);
     const data = await res.json();
-    if (data.error) { console.error("Sheets API error:", data.error.message); return []; }
+    if (data.error) {
+      console.error("Sheets API error for", sheetId, ":", data.error.message, data.error.status);
+      return [];
+    }
     const rows = data.values || [];
-    return rows.filter(r => r[0] && r[5] && r[5].includes("strava.com/activities"));
+    console.log("Sheets fetched", sheetId.slice(0,8), ":", rows.length, "rows");
+    if (rows.length > 0) console.log("  First row sample:", rows[0].slice(0,4));
+    // Filter: must have a date in col 0 and strava URL somewhere in cols 5-6
+    return rows.filter(r => r.length >= 6 && r[0] && (
+      (r[5] && r[5].includes("strava.com/activities")) ||
+      (r[4] && r[4].includes("strava.com/activities"))
+    ));
   } catch(e) {
-    console.error("Sheets fetch error:", e);
+    console.error("Sheets fetch error:", sheetId.slice(0,8), e.message);
     return [];
   }
 }
@@ -180,7 +189,7 @@ function parseSheetRows(rows, sheetType) {
     const name    = r[1] || "Ride";
     const meters  = parseFloat(r[2]) || 0;
     const dur     = r[3] || "";
-    const url     = r[5] || "";
+    const url     = (r[5] && r[5].includes("strava.com")) ? r[5] : (r[4] && r[4].includes("strava.com")) ? r[4] : "";
     const actMatch = url.match(/activities\/(\d+)/);
     if (!actMatch) return null;
     const actId = actMatch[1];
@@ -1782,6 +1791,12 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
         <>
           {stravaLoading && (
             <div style={{fontSize:".78rem",color:"#f97316",marginBottom:8}}>⏳ Loading rides from Strava…</div>
+          )}
+          {!stravaLoading && (stravaRides||[]).length === 0 && (stravaEbike||[]).length === 0 && (
+            <div style={{fontSize:".78rem",color:"#f87171",marginBottom:8,background:"#2a0a0a",padding:"8px 12px",borderRadius:7}}>
+              ⚠ Rides not loaded. Check browser console (F12) for errors. Sheets may need to be shared publicly.
+              {onRefreshStrava && <button className="btn btn-g btn-sm" style={{marginLeft:8,fontSize:".7rem"}} onClick={onRefreshStrava}>Retry</button>}
+            </div>
           )}
           <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
             <div className="tabs" style={{margin:0,flexShrink:0}}>
