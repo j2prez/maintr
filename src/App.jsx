@@ -502,6 +502,366 @@ const STRAVA_RIDES = [
 ];
 
 
+// E-Bike rides — keyed by activity_id, prefixed with 'ebike-' in ride_assignments
+const STRAVA_EBIKE_RIDES = [
+  ["11184437927","2024-04-14",13.12,"Evening E-Bike Ride",2024],
+  ["11201683327","2024-04-17",19.72,"Morning E-Bike Ride",2024],
+  ["11205849036","2024-04-17",19.31,"Afternoon E-Bike Ride",2024],
+  ["11278276757","2024-04-27",29.54,"Afternoon E-Bike Ride",2024],
+  ["11278553777","2024-04-27",3.09,"Afternoon E-Bike Ride",2024],
+  ["11286608873","2024-04-28",5.95,"I use an app to name my rides and this is the best they've got",2024],
+  ["11297725816","2024-04-30",19.91,"Is \"tired old cliche\" one?",2024],
+  ["11314350996","2024-05-02",19.82,"I believe our adventure through time has taken a most serious turn.",2024],
+  ["11318352935","2024-05-02",21.02,"Afternoon E-Bike Ride",2024],
+  ["11344598056","2024-05-06",19.76,"Morning E-Bike Ride",2024],
+  ["11348549127","2024-05-06",19.35,"I guess I'm the only one that remains unaffiliated",2024],
+  ["11360085809","2024-05-08",19.76,"I don't learn. One of my issues.",2024],
+  ["11364497429","2024-05-08",19.29,"If you don't believe you can win, there is no point in getting out of bed at the end of the day.",2024],
+  ["11396702535","2024-05-12",3.29,"A good rule to remember for life is that when it comes to plastic surgery and sushi, never be attracted by a bargain.",2024],
+  ["11399623031","2024-05-13",19.76,"Morning E-Bike Ride",2024],
+  ["11403899809","2024-05-13",19.35,"Winner Didn't Even Know It Was Pie-Eating Contest",2024],
+  ["11423336493","2024-05-16",19.76,"I don't trust atoms. They make up everything.",2024],
+  ["11427355661","2024-05-16",19.72,"Afternoon E-Bike Ride",2024],
+  ["11454267809","2024-05-20",19.76,"Morning E-Bike Ride",2024],
+  ["11458788076","2024-05-20",19.3,"Better than a sharp stick in the eye",2024],
+  ["11466743800","2024-05-21",19.29,"I tried to start a revolution... but I didn't print enough pamphlets so hardly anyone turned up.",2024],
+  ["11486045541","2024-05-24",19.75,"Morning E-Bike Ride",2024],
+  ["11488859521","2024-05-24",20.91,"Afternoon E-Bike Ride",2024],
+  ["11496650571","2024-05-25",37.27,"You know what the difference is between you and me? I make this look good.",2024],
+  ["11512364388","2024-05-27",3.18,"Afternoon E-Bike Ride",2024],
+  ["11515821584","2024-05-28",19.9,"Morning E-Bike Ride",2024],
+  ["11519952679","2024-05-28",19.3,"Afternoon E-Bike Ride",2024],
+  ["11523814155","2024-05-29",19.89,"I feel like I'm watching an episode of Matlock where Matlock has a concussion.",2024],
+  ["11528394847","2024-05-29",19.24,"Afternoon E-Bike Ride",2024],
+  ["11539199679","2024-05-31",19.75,"Morning E-Bike Ride",2024],
+  ["11542911001","2024-05-31",18.7,"Afternoon E-Bike Ride",2024],
+  ["11562454680","2024-06-03",20.01,"Morning E-Bike Ride",2024],
+  ["11566747475","2024-06-03",19.29,"If everything you try works, then you are not trying hard enough.",2024],
+  ["11578707580","2024-06-05",19.76,"Morning E-Bike Ride",2024],
+  ["11583558437","2024-06-05",19.37,"Afternoon E-Bike Ride",2024],
+  ["11594791867","2024-06-07",19.52,"Morning E-Bike Ride",2024],
+  ["11598674139","2024-06-07",19.34,"I do have my moments. Not many, but I have them.",2024],
+  ["11614485295","2024-06-09",6.7,"Afternoon E-Bike Ride",2024],
+  ["11618212907","2024-06-10",19.75,"Morning E-Bike Ride",2024],
+  ["11622371315","2024-06-10",19.25,"Sanity, you're a madman\!",2024],
+  ["11638840816","2024-06-12",19.26,"Coffee or waste water from burnt beans?",2024],
+  ["11642154517","2024-06-13",19.71,"Hey kids. Spelling is fun\!",2024],
+  ["11646342338","2024-06-13",6.46,"Afternoon E-Bike Ride",2024],
+  ["11649628601","2024-06-14",19.76,"Morning E-Bike Ride",2024],
+  ["11653298013","2024-06-14",19.21,"Relax, I think I see a scenario where we all get out of here with acceptable losses.",2024],
+  ["11672157144","2024-06-17",19.75,"It's like mango chutney and burnt hair",2024],
+  ["11676557110","2024-06-17",19.37,"Afternoon E-Bike Ride",2024],
+  ["11688281121","2024-06-19",19.7,"I'm gonna party like its on sale for $19.99\!",2024],
+  ["11693109854","2024-06-19",19.31,"Afternoon E-Bike Ride",2024],
+  ["11703851602","2024-06-21",19.71,"I love the smell of napalm in the morning.",2024],
+  ["11707389122","2024-06-21",19.29,"That's one of my biggest fears. If I ever, like, wake up as a doughnut...",2024],
+  ["11734803745","2024-06-25",19.7,"Morning E-Bike Ride",2024],
+  ["11751200359","2024-06-27",19.75,"Morning E-Bike Ride",2024],
+  ["11755400327","2024-06-27",8.82,"It's a beautiful afternoon. Shouldn't you be outside with your friends turning my tool shed into Mordor or Endor or... something heartbreaking?",2024],
+  ["11756280463","2024-06-27",14.72,"Evening E-Bike Ride",2024],
+  ["11758799965","2024-06-28",19.71,"If we don't get this brook babbling we're all going to end up looking like doe-eyed labradors",2024],
+  ["11762345211","2024-06-28",19.34,"We're all stories in the end.",2024],
+  ["11781186078","2024-07-01",19.71,"Morning E-Bike Ride",2024],
+  ["11785559017","2024-07-01",19.25,"At this point, we aren't just flirting with disaster",2024],
+  ["11797483340","2024-07-03",19.76,"Morning E-Bike Ride",2024],
+  ["11801944633","2024-07-03",19.34,"I know that tone. You're making a point.",2024],
+  ["11810191986","2024-07-04",1.65,"Afternoon E-Bike Ride",2024],
+  ["11811390203","2024-07-04",1.8,"Night E-Bike Ride",2024],
+  ["11813462097","2024-07-05",19.75,"Morning E-Bike Ride",2024],
+  ["11817116212","2024-07-05",19.3,"Afternoon E-Bike Ride",2024],
+  ["11836597261","2024-07-08",19.75,"All I need is a bike.",2024],
+  ["11841252212","2024-07-08",19.26,"Afternoon E-Bike Ride",2024],
+  ["11853283793","2024-07-10",19.76,"Morning E-Bike Ride",2024],
+  ["11857719338","2024-07-10",19.31,"Afternoon E-Bike Ride",2024],
+  ["11861305658","2024-07-11",19.75,"Morning E-Bike Ride",2024],
+  ["11865650844","2024-07-11",5.22,"Afternoon E-Bike Ride",2024],
+  ["11869187656","2024-07-12",19.75,"Morning E-Bike Ride",2024],
+  ["11872706817","2024-07-12",19.41,"Afternoon E-Bike Ride",2024],
+  ["11900881788","2024-07-16",19.75,"Morning E-Bike Ride",2024],
+  ["11918164700","2024-07-18",19.63,"Morning E-Bike Ride",2024],
+  ["11922769272","2024-07-18",8.28,"Afternoon E-Bike Ride",2024],
+  ["11923679001","2024-07-18",14.68,"Evening E-Bike Ride",2024],
+  ["11926488343","2024-07-19",19.76,"If you're not first you're last",2024],
+  ["11930319821","2024-07-19",19.31,"Afternoon E-Bike Ride",2024],
+  ["11950714042","2024-07-22",19.71,"Don't follow your dreams. Follow my Twitter.",2024],
+  ["11955329213","2024-07-22",19.36,"Someone just put the 'neato' in incognito\!",2024],
+  ["11968101480","2024-07-24",19.76,"Morning E-Bike Ride",2024],
+  ["11972808828","2024-07-24",19.3,"There are plenty of things to be down about: The deficit, air pollution in China, The Hobbit wasn't very good",2024],
+  ["11984839920","2024-07-26",19.74,"I think that's a right load of old codswallop",2024],
+  ["11988830388","2024-07-26",19.27,"Afternoon E-Bike Ride",2024],
+  ["11997061925","2024-07-27",2.87,"Afternoon E-Bike Ride",2024],
+  ["12002100513","2024-07-28",2.74,"Well now I'm standing. Happy? We're all standing now. Bunch of jackasses, standing in a circle.",2024],
+  ["12009151186","2024-07-29",19.75,"Morning E-Bike Ride",2024],
+  ["12013462544","2024-07-29",19.3,"Why are you keeping this curiosity door locked?",2024],
+  ["12026335089","2024-07-31",19.7,"Be careful who you call crazy. Some of us think it's a compliment.",2024],
+  ["12030980966","2024-07-31",19.37,"Afternoon E-Bike Ride",2024],
+  ["12034711443","2024-08-01",19.7,"Morning E-Bike Ride",2024],
+  ["12038920838","2024-08-01",6.6,"Afternoon E-Bike Ride",2024],
+  ["12042816419","2024-08-02",19.75,"Morning E-Bike Ride",2024],
+  ["12046583918","2024-08-02",19.26,"Afternoon E-Bike Ride",2024],
+  ["12067399203","2024-08-05",19.7,"Stronger than dirt.",2024],
+  ["12072114240","2024-08-05",19.41,"I would love to stand here and talk with you.... but I'm not going to.",2024],
+  ["12085308678","2024-08-07",19.7,"Can we maybe stay on my problem until the bread comes?",2024],
+  ["12090266738","2024-08-07",19.3,"Don't make me use that gas on you, huh, pumpkin?",2024],
+  ["12102225738","2024-08-09",19.71,"If prisoners could take their own mug shots, would they be called cell-fies?",2024],
+  ["12105982971","2024-08-09",19.32,"Afternoon E-Bike Ride",2024],
+  ["12135629497","2024-08-13",19.75,"We're all stories in the end. Just make it a good one, eh?",2024],
+  ["12140640989","2024-08-13",19.3,"My recliner and I go way back.",2024],
+  ["12186152192","2024-08-19",19.76,"Morning E-Bike Ride",2024],
+  ["12190858597","2024-08-19",19.4,"Afternoon E-Bike Ride",2024],
+  ["12203854784","2024-08-21",19.7,"We're not circumventing it. We're just trying to get around it.",2024],
+  ["12208687219","2024-08-21",19.33,"Afternoon E-Bike Ride",2024],
+  ["12220858578","2024-08-23",19.7,"Morning E-Bike Ride",2024],
+  ["12224806842","2024-08-23",19.43,"It's a weird life, but it's where I'm at right now.",2024],
+  ["12245620057","2024-08-26",19.75,"This madness ends now\!",2024],
+  ["12250211639","2024-08-26",19.32,"Afternoon E-Bike Ride",2024],
+  ["12263271228","2024-08-28",19.71,"We're not hosting an intergalactic kegger down here.",2024],
+  ["12268100943","2024-08-28",19.38,"Lemme check my list of powers and weaknesses: ability to do anything, but only whenever I want.",2024],
+  ["12271899925","2024-08-29",20.06,"Morning E-Bike Ride",2024],
+  ["12276487935","2024-08-29",19.66,"So what if I don't know what \"Armageddon\" means? It's not the end of the world.",2024],
+  ["12280207459","2024-08-30",19.72,"Morning E-Bike Ride",2024],
+  ["12284085142","2024-08-30",19.38,"Afternoon E-Bike Ride",2024],
+  ["12292135694","2024-08-31",5.21,"Afternoon E-Bike Ride",2024],
+  ["12292612489","2024-08-31",2.99,"Afternoon E-Bike Ride",2024],
+  ["12313896046","2024-09-03",19.7,"Morning E-Bike Ride",2024],
+  ["12319001154","2024-09-03",19.42,"Afternoon E-Bike Ride",2024],
+  ["12323033526","2024-09-04",19.76,"Morning E-Bike Ride",2024],
+  ["12339953600","2024-09-06",19.71,"Morning E-Bike Ride",2024],
+  ["12343867833","2024-09-06",19.4,"Okay, this is gonna be okay. We just happen to be in The Shining. Which is fine. Shelley Duvall and the kid got out, and so will we.",2024],
+  ["12365270260","2024-09-09",19.71,"Morning E-Bike Ride",2024],
+  ["12369679985","2024-09-09",16.62,"Afternoon E-Bike Ride",2024],
+  ["12369773768","2024-09-09",3.01,"Afternoon E-Bike Ride",2024],
+  ["12382471435","2024-09-11",19.71,"Elementary chaos theory shows that all robots must inevitably run amok.",2024],
+  ["12387137259","2024-09-11",19.41,"Afternoon E-Bike Ride",2024],
+  ["12398748620","2024-09-13",19.75,"Morning E-Bike Ride",2024],
+  ["12402416847","2024-09-13",19.31,"Fight for your right to party",2024],
+  ["12423336851","2024-09-16",19.72,"Morning E-Bike Ride",2024],
+  ["12427765886","2024-09-16",19.41,"It's everywhere.... It's even in my racoon wounds\!",2024],
+  ["12440633268","2024-09-18",19.7,"Morning E-Bike Ride",2024],
+  ["12445562887","2024-09-18",19.25,"Afternoon E-Bike Ride",2024],
+  ["12457630021","2024-09-20",19.7,"Morning E-Bike Ride",2024],
+  ["12461523091","2024-09-20",19.4,"Afternoon E-Bike Ride",2024],
+  ["12482675422","2024-09-23",19.8,"Morning E-Bike Ride",2024],
+  ["12487069119","2024-09-23",20.15,"Afternoon E-Bike Ride",2024],
+  ["12499622192","2024-09-25",19.72,"Taking off faster than a toupee in a fan factory.",2024],
+  ["12504107509","2024-09-25",19.32,"Afternoon E-Bike Ride",2024],
+  ["12507601092","2024-09-26",19.78,"I can feel the righteousness surging\!",2024],
+  ["12511312495","2024-09-26",2.35,"Do not disturb. I'm disturbed enough already.",2024],
+  ["12539017659","2024-09-30",19.75,"Why are you giving me the secret signal to shut up?",2024],
+  ["12543209332","2024-09-30",19.4,"Afternoon E-Bike Ride",2024],
+  ["12555529894","2024-10-02",19.7,"For fifteen years I have killed myself setting a community standard with my fanciful theme brunches, mounted at considerable personal expense.",2024],
+  ["12559676438","2024-10-02",5.02,"There was a cyclone in Brooklyn last year. It destroyed two vintage T-shirt shops and a banjo.",2024],
+  ["12560137147","2024-10-02",15.23,"I wouldn't do much for a Klondike bar, but i'd do some sketchy stuff for some tacos.",2024],
+  ["12571456655","2024-10-04",19.74,"Morning E-Bike Ride",2024],
+  ["12575083696","2024-10-04",19.43,"Afternoon E-Bike Ride",2024],
+  ["12596577911","2024-10-07",19.75,"Have you ever wondered if there was more to life, other than being really, really, ridiculously good looking?",2024],
+  ["12600859702","2024-10-07",19.41,"You Can Never Have Too Many Of Your Favorite One Calorie Breath Mints.",2024],
+  ["12612901836","2024-10-09",19.72,"Ah, savory cheese puffs, made inedible by time and fate.",2024],
+  ["12617137391","2024-10-09",19.4,"Afternoon E-Bike Ride",2024],
+  ["12628226460","2024-10-11",19.7,"Morning E-Bike Ride",2024],
+  ["12631939861","2024-10-11",19.4,"Afternoon E-Bike Ride",2024],
+  ["12652192962","2024-10-14",19.71,"What if there were no hypothetical questions?",2024],
+  ["12656553991","2024-10-14",19.32,"Afternoon E-Bike Ride",2024],
+  ["12668456831","2024-10-16",19.71,"Insubordinate and Churlish",2024],
+  ["12672926788","2024-10-16",19.4,"Anybody order fried sauerkraut?",2024],
+  ["12684041829","2024-10-18",19.76,"Gone, like a fart in the wind.",2024],
+  ["12687624939","2024-10-18",19.4,"I understand the universe about as well as a barnacle understands a nuclear aircraft carrier.",2024],
+  ["12707718099","2024-10-21",19.71,"Morning E-Bike Ride",2024],
+  ["12712183684","2024-10-21",19.38,"Afternoon E-Bike Ride",2024],
+  ["12724524079","2024-10-23",19.81,"Hmm. That came off as less sarcastic than intended. Let me try again.",2024],
+  ["12728839418","2024-10-23",5.38,"Reality is ruining my life.",2024],
+  ["12729396181","2024-10-23",15.13,"Afternoon E-Bike Ride",2024],
+  ["12740332432","2024-10-25",19.7,"Morning E-Bike Ride",2024],
+  ["12743852495","2024-10-25",20.2,"Afternoon E-Bike Ride",2024],
+  ["12764156779","2024-10-28",19.71,"Trying to define yourself is like trying to bite your own teeth.",2024],
+  ["12768526006","2024-10-28",19.73,"Afternoon E-Bike Ride",2024],
+  ["12780478641","2024-10-30",19.7,"Morning E-Bike Ride",2024],
+  ["12784972156","2024-10-30",19.73,"Afternoon E-Bike Ride",2024],
+  ["12795852012","2024-11-01",20.5,"Morning E-Bike Ride",2024],
+  ["12799601775","2024-11-01",19.41,"I once survived four days in a Del Taco parking lot extracting life-saving nutrients from puddles and bird poop.",2024],
+  ["12814078271","2024-11-03",1.65,"Morning E-Bike Ride",2024],
+  ["12815184100","2024-11-03",1.63,"Lunch E-Bike Ride",2024],
+  ["12820099500","2024-11-04",19.7,"Morning E-Bike Ride",2024],
+  ["12824314162","2024-11-04",19.76,"Afternoon E-Bike Ride",2024],
+  ["12836173555","2024-11-06",19.74,"You don't need a parachute to go skydiving. You need a parachute to go skydiving twice.",2024],
+  ["12840558197","2024-11-06",19.75,"There's no other place like this place, anywhere near this place, so this must be the place.",2024],
+  ["12851453837","2024-11-08",19.71,"Morning E-Bike Ride",2024],
+  ["12854474947","2024-11-08",5.16,"To find inner peace search deep inside yourself. Is there a donut there? If not, take corrective action.",2024],
+  ["12854864078","2024-11-08",16.09,"Lying makes me sweat. Tha's why I can't play poker or talk to pregnant women.",2024],
+  ["12860990643","2024-11-09",1.64,"Lunch E-Bike Ride",2024],
+  ["12861960022","2024-11-09",1.76,"Afternoon E-Bike Ride",2024],
+  ["12874862136","2024-11-11",19.74,"Morning E-Bike Ride",2024],
+  ["12879248064","2024-11-11",19.77,"Elementary chaos theory shows that all robots must inevitably run amok.",2024],
+  ["12890811524","2024-11-13",19.76,"Morning E-Bike Ride",2024],
+  ["12894999341","2024-11-13",19.01,"That's for when things get really hardcore... or if you wanna blow up moons.",2024],
+  ["12905649227","2024-11-15",19.71,"Morning E-Bike Ride",2024],
+  ["12909159757","2024-11-15",19.75,"I'm your density. I mean, your destiny.",2024],
+  ["12928492840","2024-11-18",19.76,"Morning E-Bike Ride",2024],
+  ["12932537144","2024-11-18",19.75,"Don't make me an optimist, you will ruin my life.",2024],
+  ["12943426201","2024-11-20",19.76,"Morning E-Bike Ride",2024],
+  ["12947656930","2024-11-20",19.76,"Come Mr. DJ song pon de replay",2024],
+  ["12957704532","2024-11-22",19.75,"Morning E-Bike Ride",2024],
+  ["12960705113","2024-11-22",19.86,"My opinions are awesome\!",2024],
+  ["12979191584","2024-11-25",19.75,"I am NOTHING like Family Guy\! When I make jokes they are inherent to a story\! Deep situational and emotional jokes based on what is relevant and has a point, not just one random interchangeable joke after another\!",2024],
+  ["12983233267","2024-11-25",19.02,"Afternoon E-Bike Ride",2024],
+  ["13210834758","2024-12-28",14.78,"Afternoon E-Bike Ride",2024],
+  ["13211393950","2024-12-28",18.46,"Pork Chops for Dinner Again?",2024],
+  ["13218023715","2024-12-29",41.21,"Morning E-Bike Ride",2024],
+  ["13523981853","2025-02-02",31.08,"Afternoon E-Bike Ride",2025],
+  ["13527300778","2025-02-03",19.7,"Morning E-Bike Ride",2025],
+  ["13532217728","2025-02-03",19.33,"If goods are damaged in shipping do they become bads?",2025],
+  ["13837912007","2025-03-09",40.11,"Afternoon E-Bike Ride",2025],
+  ["13850749585","2025-03-11",19.76,"Morning E-Bike Ride",2025],
+  ["13856194222","2025-03-11",19.31,"Afternoon E-Bike Ride",2025],
+  ["13869681268","2025-03-13",19.75,"Morning E-Bike Ride",2025],
+  ["13875111938","2025-03-13",19.3,"Afternoon E-Bike Ride",2025],
+  ["13879089330","2025-03-14",19.75,"Morning E-Bike Ride",2025],
+  ["13883368481","2025-03-14",19.25,"Afternoon E-Bike Ride",2025],
+  ["13911053522","2025-03-17",19.58,"Afternoon E-Bike Ride",2025],
+  ["13915106805","2025-03-18",19.97,"Morning E-Bike Ride",2025],
+  ["13920708566","2025-03-18",22.32,"Afternoon E-Bike Ride",2025],
+  ["13925002306","2025-03-19",19.71,"Morning E-Bike Ride",2025],
+  ["13930500705","2025-03-19",19.49,"Afternoon E-Bike Ride",2025],
+  ["13934759854","2025-03-20",19.96,"Morning E-Bike Ride",2025],
+  ["13940027851","2025-03-20",19.25,"Afternoon E-Bike Ride",2025],
+  ["13981103120","2025-03-25",19.74,"Morning E-Bike Ride",2025],
+  ["13986864709","2025-03-25",19.27,"Afternoon E-Bike Ride",2025],
+  ["14006087675","2025-03-27",19.27,"Afternoon E-Bike Ride",2025],
+  ["14009911011","2025-03-28",19.75,"Morning E-Bike Ride",2025],
+  ["14014216446","2025-03-28",19.28,"Afternoon E-Bike Ride",2025],
+  ["14037463936","2025-03-31",19.76,"Morning E-Bike Ride",2025],
+  ["14042744319","2025-03-31",19.25,"Afternoon E-Bike Ride",2025],
+  ["14087003576","2025-04-05",2.36,"Morning E-Bike Ride",2025],
+  ["14087744134","2025-04-05",2.35,"Morning E-Bike Ride",2025],
+  ["14131180681","2025-04-09",19.26,"Afternoon E-Bike Ride",2025],
+  ["14135424760","2025-04-10",19.93,"Morning E-Bike Ride",2025],
+  ["14144732733","2025-04-11",19.77,"Morning E-Bike Ride",2025],
+  ["14149188386","2025-04-11",19.48,"Afternoon E-Bike Ride",2025],
+  ["14173323974","2025-04-14",19.74,"Morning E-Bike Ride",2025],
+  ["14178625975","2025-04-14",19.31,"Afternoon E-Bike Ride",2025],
+  ["14192889012","2025-04-16",19.74,"Morning E-Bike Ride",2025],
+  ["14198083387","2025-04-16",19.25,"Afternoon E-Bike Ride",2025],
+  ["14211777114","2025-04-18",19.68,"Morning E-Bike Ride",2025],
+  ["14493128984","2025-05-15",28.03,"Afternoon E-Bike Ride",2025],
+  ["14501930060","2025-05-16",19.26,"Afternoon E-Bike Ride",2025],
+  ["14527564026","2025-05-19",19.77,"Morning E-Bike Ride",2025],
+  ["14533397692","2025-05-19",19.31,"Afternoon E-Bike Ride",2025],
+  ["14549227616","2025-05-21",19.76,"Morning E-Bike Ride",2025],
+  ["14555062935","2025-05-21",19.26,"Afternoon E-Bike Ride",2025],
+  ["14568969124","2025-05-23",19.75,"Morning E-Bike Ride",2025],
+  ["14573614413","2025-05-23",19.28,"Afternoon E-Bike Ride",2025],
+  ["14609065291","2025-05-27",19.75,"Morning E-Bike Ride",2025],
+  ["14614818734","2025-05-27",19.29,"Afternoon E-Bike Ride",2025],
+  ["14629867128","2025-05-29",19.76,"Morning E-Bike Ride",2025],
+  ["14635330369","2025-05-29",7.05,"Afternoon E-Bike Ride",2025],
+  ["14640090813","2025-05-30",19.77,"Morning E-Bike Ride",2025],
+  ["14645119523","2025-05-30",19.25,"Afternoon E-Bike Ride",2025],
+  ["14671167716","2025-06-02",19.76,"Morning E-Bike Ride",2025],
+  ["14676653358","2025-06-02",19.28,"Afternoon E-Bike Ride",2025],
+  ["14692620548","2025-06-04",19.76,"Morning E-Bike Ride",2025],
+  ["14698647071","2025-06-04",19.29,"Afternoon E-Bike Ride",2025],
+  ["14712804831","2025-06-06",19.75,"Morning E-Bike Ride",2025],
+  ["14753584746","2025-06-10",19.77,"Morning E-Bike Ride",2025],
+  ["14759641037","2025-06-10",19.29,"Afternoon E-Bike Ride",2025],
+  ["14775373204","2025-06-12",19.76,"Morning E-Bike Ride",2025],
+  ["14781014780","2025-06-12",10.1,"Afternoon E-Bike Ride",2025],
+  ["14782203947","2025-06-12",15.05,"Evening E-Bike Ride",2025],
+  ["14785499028","2025-06-13",19.76,"Morning E-Bike Ride",2025],
+  ["14790185513","2025-06-13",19.25,"Afternoon E-Bike Ride",2025],
+  ["14800462813","2025-06-14",13.07,"Afternoon E-Bike Ride",2025],
+  ["14815610894","2025-06-16",19.75,"Morning E-Bike Ride",2025],
+  ["14821381106","2025-06-16",19.26,"Afternoon E-Bike Ride",2025],
+  ["14837611219","2025-06-18",19.77,"Morning E-Bike Ride",2025],
+  ["14843109361","2025-06-18",19.27,"Afternoon E-Bike Ride",2025],
+  ["14848254408","2025-06-19",19.0,"Morning E-Bike Ride",2025],
+  ["14854188002","2025-06-19",19.15,"Afternoon E-Bike Ride",2025],
+  ["14858794621","2025-06-20",19.76,"Morning E-Bike Ride",2025],
+  ["14863561448","2025-06-20",19.29,"Afternoon E-Bike Ride",2025],
+  ["14905520987","2025-06-24",19.24,"Afternoon E-Bike Ride",2025],
+  ["14926338487","2025-06-26",19.25,"Afternoon E-Bike Ride",2025],
+  ["14935535770","2025-06-27",19.26,"Afternoon E-Bike Ride",2025],
+  ["14971767029","2025-07-01",19.73,"Morning E-Bike Ride",2025],
+  ["14977587679","2025-07-01",19.27,"Afternoon E-Bike Ride",2025],
+  ["14993062627","2025-07-03",19.75,"Morning E-Bike Ride",2025],
+  ["14998615266","2025-07-03",19.25,"Afternoon E-Bike Ride",2025],
+  ["15033696952","2025-07-07",19.76,"Morning E-Bike Ride",2025],
+  ["15039434789","2025-07-07",19.28,"Afternoon E-Bike Ride",2025],
+  ["15055799652","2025-07-09",19.74,"Morning E-Bike Ride",2025],
+  ["15059294045","2025-07-09",6.21,"Lunch E-Bike Ride",2025],
+  ["15062156577","2025-07-09",14.77,"Afternoon E-Bike Ride",2025],
+  ["15067183134","2025-07-10",19.36,"Morning E-Bike Ride",2025],
+  ["15072869806","2025-07-10",13.03,"Afternoon E-Bike Ride",2025],
+  ["15077765166","2025-07-11",19.75,"Morning E-Bike Ride",2025],
+  ["15082554771","2025-07-11",19.23,"Afternoon E-Bike Ride",2025],
+  ["15109396536","2025-07-14",19.72,"Morning E-Bike Ride",2025],
+  ["15115401249","2025-07-14",19.24,"Afternoon E-Bike Ride",2025],
+  ["15131983591","2025-07-16",19.7,"Morning E-Bike Ride",2025],
+  ["15138078129","2025-07-16",19.22,"Afternoon E-Bike Ride",2025],
+  ["15153628586","2025-07-18",19.75,"Morning E-Bike Ride",2025],
+  ["15158696101","2025-07-18",19.22,"Afternoon E-Bike Ride",2025],
+  ["15185426978","2025-07-21",19.76,"Morning E-Bike Ride",2025],
+  ["15191312402","2025-07-21",19.26,"Afternoon E-Bike Ride",2025],
+  ["15208241782","2025-07-23",19.75,"Morning E-Bike Ride",2025],
+  ["15214579422","2025-07-23",19.32,"Afternoon E-Bike Ride",2025],
+  ["15230263419","2025-07-25",19.77,"Morning E-Bike Ride",2025],
+  ["15234732319","2025-07-25",19.27,"Afternoon E-Bike Ride",2025],
+  ["15267951284","2025-07-28",19.27,"Afternoon E-Bike Ride",2025],
+  ["15284904251","2025-07-30",19.8,"Morning E-Bike Ride",2025],
+  ["15291425408","2025-07-30",19.2,"Afternoon E-Bike Ride",2025],
+  ["15296949233","2025-07-31",18.5,"Morning E-Bike Ride",2025],
+  ["15302138846","2025-07-31",6.17,"Afternoon E-Bike Ride",2025],
+  ["15312162559","2025-08-01",19.29,"Afternoon E-Bike Ride",2025],
+  ["15339535129","2025-08-04",19.77,"Morning E-Bike Ride",2025],
+  ["15345725217","2025-08-04",19.25,"Afternoon E-Bike Ride",2025],
+  ["15363210339","2025-08-06",19.72,"Morning E-Bike Ride",2025],
+  ["15369940842","2025-08-06",19.23,"Afternoon E-Bike Ride",2025],
+  ["15386473689","2025-08-08",19.75,"Morning E-Bike Ride",2025],
+  ["15391723192","2025-08-08",19.25,"Afternoon E-Bike Ride",2025],
+  ["15431403359","2025-08-12",19.75,"Morning E-Bike Ride",2025],
+  ["15437840021","2025-08-12",19.29,"Afternoon E-Bike Ride",2025],
+  ["15455297369","2025-08-14",10.36,"Morning E-Bike Ride",2025],
+  ["15456520586","2025-08-14",11.42,"Morning E-Bike Ride",2025],
+  ["15460639360","2025-08-14",8.63,"Afternoon E-Bike Ride",2025],
+  ["15461507763","2025-08-14",14.72,"Evening E-Bike Ride",2025],
+  ["15466759961","2025-08-15",19.76,"Morning E-Bike Ride",2025],
+  ["15471254656","2025-08-15",19.24,"Afternoon E-Bike Ride",2025],
+  ["15499226634","2025-08-18",19.73,"Morning Commute",2025],
+  ["15505572603","2025-08-18",19.21,"Afternoon E-Bike Ride",2025],
+  ["15529541607","2025-08-20",19.26,"Afternoon E-Bike Ride",2025],
+  ["15534627522","2025-08-21",19.75,"Morning E-Bike Ride",2025],
+  ["15540466432","2025-08-21",1.8,"Afternoon E-Bike Ride",2025],
+  ["15550626491","2025-08-22",19.25,"Afternoon E-Bike Ride",2025],
+  ["15585626841","2025-08-25",19.26,"Afternoon E-Bike Ride",2025],
+  ["15609613680","2025-08-27",19.3,"Afternoon E-Bike Ride",2025],
+  ["15630202735","2025-08-29",19.25,"Afternoon E-Bike Ride",2025],
+  ["15687941380","2025-09-03",19.24,"Afternoon E-Bike Ride",2025],
+  ["15709625935","2025-09-05",17.88,"Afternoon E-Bike Ride",2025],
+  ["15757159465","2025-09-09",19.76,"Afternoon E-Bike Ride",2025],
+  ["15773775484","2025-09-11",18.95,"Morning E-Bike Ride",2025],
+  ["15779700281","2025-09-11",8.6,"Afternoon E-Bike Ride",2025],
+  ["15781004707","2025-09-11",14.97,"Evening E-Bike Ride",2025],
+  ["15789821014","2025-09-12",19.81,"Afternoon E-Bike Ride",2025],
+  ["15817912376","2025-09-15",19.0,"Morning E-Bike Ride",2025],
+  ["15824042711","2025-09-15",19.78,"Afternoon E-Bike Ride",2025],
+  ["15841041475","2025-09-17",19.0,"Morning E-Bike Ride",2025],
+  ["15847423589","2025-09-17",19.27,"Afternoon E-Bike Ride",2025],
+  ["15863674790","2025-09-19",19.0,"Morning E-Bike Ride",2025],
+  ["15868716207","2025-09-19",19.32,"Afternoon E-Bike Ride",2025],
+  ["15897083848","2025-09-22",19.01,"Morning E-Bike Ride",2025],
+  ["15903038478","2025-09-22",19.75,"Afternoon E-Bike Ride",2025],
+  ["15919745385","2025-09-24",19.0,"Morning E-Bike Ride",2025],
+  ["15925863722","2025-09-24",19.71,"Afternoon E-Bike Ride",2025],
+  ["15941114539","2025-09-26",19.01,"Morning E-Bike Ride",2025],
+  ["15946004653","2025-09-26",19.86,"Afternoon E-Bike Ride",2025],
+  ["15974078426","2025-09-29",19.01,"Morning E-Bike Ride",2025],
+  ["15980249165","2025-09-29",19.26,"Afternoon E-Bike Ride",2025],
+  ["15996896508","2025-10-01",19.02,"Morning E-Bike Ride",2025],
+  ["16002938683","2025-10-01",5.34,"Afternoon E-Bike Ride",2025],
+  ["16003717906","2025-10-01",14.7,"Afternoon E-Bike Ride",2025],
+  ["16018860284","2025-10-03",19.01,"Morning E-Bike Ride",2025],
+  ["16023616542","2025-10-03",19.74,"Afternoon E-Bike Ride",2025]
+];
+
 // ── Bike component categories & costs ────────────────────────────────────────
 const COMP_CATS = {
   drivetrain: { label:"Drivetrain", color:"#f97316", icon:"⚙️",  items:["bm-chain","bm-cassette","bm-clean"] },
@@ -1887,7 +2247,19 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
   const cat = BIKE_CATS[bike.type] || BIKE_CATS.road;
   const allSvcLogs = BIKE_MAINT.flatMap(item => (bikeLogs[bike.id+"-"+item.id]||[]).map(l=>({...l,itemId:item.id,itemLabel:item.label})));
   const components = bikeComponents[bike.id] || [];
-  const myRides    = STRAVA_RIDES.filter(r => rideAssignments[r.d+"_"+r.n] === bike.id || r.bike === bike.id);
+  // Build rides list from DB ride_assignments (supports both regular and e-bike rides)
+  const assignedKeys = Object.keys(rideAssignments||{}).filter(k => rideAssignments[k] === bike.id);
+  const myRides = assignedKeys.map(k => {
+    if (k.startsWith("ebike-")) {
+      const actId = k.replace("ebike-", "");
+      const r = STRAVA_EBIKE_RIDES.find(x => x[0] === actId);
+      return r ? { key:k, d:r[1], mi:r[2], n:r[3], type:"ebike" } : null;
+    } else {
+      const idx = parseInt(k);
+      const r = STRAVA_RIDES[idx];
+      return r ? { key:k, d:r[0], mi:r[2]/1609.34, n:r[1], type:"ride" } : null;
+    }
+  }).filter(Boolean).sort((a,b) => b.d.localeCompare(a.d));
 
   // Stats
   const allMyRides = myRides;
@@ -1897,17 +2269,25 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
   const compCost   = components.reduce((s,c)=>s+(c.cost||0),0);
   const svcCost    = allSvcLogs.reduce((s,l)=>s+(l.cost||0),0);
 
-  // Ride filtering
-  const filteredRides = STRAVA_RIDES.filter(r => {
-    const key = r.d+"_"+r.n;
-    const assignedTo = rideAssignments[key];
-    if (rideFilter === "mine")       return assignedTo === bike.id;
-    if (rideFilter === "unassigned") return !assignedTo;
-    return true; // all
-  }).filter(r => {
-    if (!rideSearch) return true;
-    return r.n.toLowerCase().includes(rideSearch.toLowerCase()) || r.d.includes(rideSearch);
-  });
+  // Ride filtering — combines regular Strava rides + e-bike rides
+  const filteredRides = (() => {
+    const allRegular = STRAVA_RIDES.map((r, idx) => ({
+      key: String(idx), d: r[0], mi: r[2]/1609.34, n: r[1], type: 'ride',
+      assignedTo: rideAssignments[String(idx)] || null,
+    }));
+    const allEbike = STRAVA_EBIKE_RIDES.map(r => ({
+      key: 'ebike-'+r[0], d: r[1], mi: r[2], n: r[3], type: 'ebike',
+      assignedTo: rideAssignments['ebike-'+r[0]] || null,
+    }));
+    return [...allRegular, ...allEbike].filter(r => {
+      if (rideFilter === 'mine')       return r.assignedTo === bike.id;
+      if (rideFilter === 'unassigned') return !r.assignedTo;
+      return true;
+    }).filter(r => {
+      if (!rideSearch) return true;
+      return r.n.toLowerCase().includes(rideSearch.toLowerCase()) || r.d.includes(rideSearch);
+    }).sort((a,b) => b.d.localeCompare(a.d));
+  })();
 
   // Cost by category
   const costByCat = {};
@@ -2071,25 +2451,25 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
               placeholder="Search rides…" value={rideSearch} onChange={e=>setRideSearch(e.target.value)} />
           </div>
           <div style={{fontSize:".72rem",color:"#6b7280",marginBottom:10}}>
-            {rideFilter==="unassigned" ? "Click a ride to assign it to this bike." : rideFilter==="mine" ? `${myRides.length} rides assigned to this bike.` : `Showing all ${STRAVA_RIDES.length} Strava activities.`}
+            {rideFilter==="unassigned" ? "Click a ride to assign it to this bike." : rideFilter==="mine" ? `${myRides.length} rides assigned to this bike.` : `Showing all ${filteredRides.length} Strava activities.`}
           </div>
           <div style={{maxHeight:480,overflowY:"auto"}}>
-            {filteredRides.slice(0,200).map((r,i)=>{
-              const key = r.d+"_"+r.n;
-              const assignedTo = rideAssignments[key];
-              const isMe = assignedTo === bike.id;
+            {filteredRides.slice(0,300).map((r,i)=>{
+              const key = r.key;
+              const isMe = r.assignedTo === bike.id;
+              const isEbike = r.type === "ebike";
               return (
                 <div key={i} className={`ride-row${isMe?" assigned":""}`}
                   onClick={()=>{ if(!isMe) onAssignRide(key, bike.id); else onAssignRide(key, null); }}
                   title={isMe?"Click to unassign":"Click to assign to this bike"}>
                   <div style={{flex:1,minWidth:0}}>
-                    <div className="ride-name">{r.n || "Ride"}</div>
-                    <div className="ride-meta">{r.d} · {r.dur}{r.in?" · 🏋️ Indoor":""}</div>
+                    <div className="ride-name">{isEbike?"⚡ ":""}{r.n || "Ride"}</div>
+                    <div className="ride-meta">{r.d}{r.dur?" · "+r.dur:""}</div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-                    <div className="ride-dist">{r.mi} mi</div>
+                    <div className="ride-dist">{typeof r.mi==="number"?r.mi.toFixed(1):r.mi} mi</div>
                     {isMe && <span style={{fontSize:".65rem",color:"#22c55e",fontWeight:600}}>✓</span>}
-                    {assignedTo && !isMe && <span style={{fontSize:".65rem",color:"#6b7280"}}>other</span>}
+                    {r.assignedTo && !isMe && <span style={{fontSize:".65rem",color:"#6b7280"}}>other</span>}
                   </div>
                 </div>
               );
@@ -3510,6 +3890,12 @@ export default function App() {
   // Ride assignments map: ride_key → asset_id
   const rideMap = {};
   (Array.isArray(rideAssignments) ? rideAssignments : []).forEach(r => { rideMap[r.ride_key] = r.asset_id; });
+  // Build lookup: asset_id → array of ride keys
+  const ridesByAsset = {};
+  Object.entries(rideMap).forEach(([key, assetId]) => {
+    if (!ridesByAsset[assetId]) ridesByAsset[assetId] = [];
+    ridesByAsset[assetId].push(key);
+  });
 
   // ── Load all data from Supabase ─────────────────────────────────────────────
   async function refreshSession() {
