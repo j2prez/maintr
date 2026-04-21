@@ -140,6 +140,7 @@ const BIKE_CATS = {
   gravel:  { label:"Gravel",  color:"#22c55e", bg:"#0d2311", icon:"🚵" },
   trainer: { label:"Trainer", color:"#60a5fa", bg:"#0f1f3a", icon:"🏋️" },
   zwift:   { label:"Zwift",   color:"#a78bfa", bg:"#1a1030", icon:"⚡" },
+  ebike:   { label:"E-Bike",  color:"#34d399", bg:"#0a2a1e", icon:"⚡" },
 };
 
 // ── Strava live config ───────────────────────────────────────────────────────
