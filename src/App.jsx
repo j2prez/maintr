@@ -2735,7 +2735,7 @@ function PhotoGallery({ assetId, photos, allPhotos, jwt, uid, onPrimaryChange })
               </div>
             ))}
           </div>
-
+      }
       {lightboxIdx !== null && (
         <Lightbox
           photos={assetPhotos}
@@ -2743,7 +2743,6 @@ function PhotoGallery({ assetId, photos, allPhotos, jwt, uid, onPrimaryChange })
           onClose={()=>setLightboxIdx(null)}
         />
       )}
-      }
     </div>
   );
 }
