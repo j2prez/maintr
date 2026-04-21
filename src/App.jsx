@@ -143,9 +143,19 @@ const BIKE_CATS = {
 };
 
 // ── Strava live config ───────────────────────────────────────────────────────
-const SHEETS_API_KEY      = "AIzaSyC4ppUXhaQcGBZhaaQGlQ_NZKwI_o7M7Vs";
-const STRAVA_SHEET_ID     = "1nFzYrOB4-VtbK532x6IdJond3m2XQ6afCOOix8RfPZU";
-const STRAVA_EBIKE_SHEET_ID = "1ew9bRXKdIzagiQ7cNVJbNrlA9_Wr2mpuGxXqR4ejHsQ";
+const SHEETS_API_KEY         = "AIzaSyC4ppUXhaQcGBZhaaQGlQ_NZKwI_o7M7Vs";
+const STRAVA_SHEET_RIDE      = "1nFzYrOB4-VtbK532x6IdJond3m2XQ6afCOOix8RfPZU";   // Regular rides
+const STRAVA_SHEET_VIRTUAL   = "151t95RUZFvRRW39A6oacWzAnJwWFXuhs39PENxhrD7g";   // Virtual/Zwift
+const STRAVA_SHEET_EBIKE     = "1ew9bRXKdIzagiQ7cNVJbNrlA9_Wr2mpuGxXqR4ejHsQ";  // E-bike rides
+
+// Sheet routing by bike subtype — determines which sheet(s) a bike can see
+const BIKE_SHEET_MAP = {
+  road:    ["ride"],
+  gravel:  ["ride"],
+  trainer: ["virtual"],
+  zwift:   ["virtual"],
+  ebike:   ["ebike"],
+};
 
 async function fetchStravaSheet(sheetId) {
   const url = "https://sheets.googleapis.com/v4/spreadsheets/" + sheetId +
@@ -153,52 +163,37 @@ async function fetchStravaSheet(sheetId) {
   try {
     const res  = await fetch(url);
     const data = await res.json();
+    if (data.error) { console.error("Sheets API error:", data.error.message); return []; }
     const rows = data.values || [];
-    return rows.filter(r => r[0] && r[0].includes(",") && r[5] && r[5].includes("strava.com"));
+    return rows.filter(r => r[0] && r[5] && r[5].includes("strava.com/activities"));
   } catch(e) {
     console.error("Sheets fetch error:", e);
     return [];
   }
 }
 
-function parseStravaRows(rows) {
+// Parse any Strava sheet row into a unified ride object keyed by activity ID
+// Key format: "{sheetType}-{activityId}"  e.g. "ride-8880651361", "ebike-11184437927"
+function parseSheetRows(rows, sheetType) {
   return rows.map(r => {
-    const dateStr = r[0]; // "April 14, 2023 at 06:22PM"
+    const dateStr = r[0] || "";
     const name    = r[1] || "Ride";
     const meters  = parseFloat(r[2]) || 0;
     const dur     = r[3] || "";
-    try {
-      // Parse date — handle "Month DD, YYYY at HH:MMam/pm"
-      const cleaned = dateStr.replace(" at ", " ").replace(/([AP]M)$/, " $1");
-      const dt = new Date(cleaned);
-      if (isNaN(dt)) return null;
-      const iso = dt.toISOString().split("T")[0];
-      const mi  = Math.round((meters / 1609.34) * 100) / 100;
-      const indoor = /indoor|zwift|trainer|virtual/i.test(name);
-      return { d: iso, n: name, mi, dur, in: indoor };
-    } catch(e) { return null; }
-  }).filter(Boolean).sort((a,b) => a.d.localeCompare(b.d));
-}
-
-function parseEbikeRows(rows) {
-  return rows.map(r => {
-    const dateStr = r[0];
-    const name    = r[1] || "E-Bike Ride";
-    const meters  = parseFloat(r[2]) || 0;
-    const urlPart = r[5] || "";
-    const actMatch = urlPart.match(/activities\/(\d+)/);
+    const url     = r[5] || "";
+    const actMatch = url.match(/activities\/(\d+)/);
     if (!actMatch) return null;
     const actId = actMatch[1];
     try {
-      const cleaned = dateStr.replace(" at ", " ").replace(/([AP]M)$/, " $1");
+      const cleaned = dateStr.replace(" at ", " ").replace(/([AP]M)$/i, " $1");
       const dt = new Date(cleaned);
-      if (isNaN(dt)) return null;
+      if (isNaN(dt.getTime())) return null;
       const iso  = dt.toISOString().split("T")[0];
       const year = dt.getFullYear();
       const mi   = Math.round((meters / 1609.34) * 100) / 100;
-      return [actId, iso, mi, name, year];
+      return { key: sheetType + "-" + actId, actId, d: iso, n: name, mi, dur, year, type: sheetType };
     } catch(e) { return null; }
-  }).filter(Boolean);
+  }).filter(Boolean).sort((a,b) => a.d.localeCompare(b.d));
 }
 
 
@@ -1587,17 +1582,17 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
   const cat = BIKE_CATS[bike.type] || BIKE_CATS.road;
   const allSvcLogs = BIKE_MAINT.flatMap(item => (bikeLogs[bike.id+"-"+item.id]||[]).map(l=>({...l,itemId:item.id,itemLabel:item.label})));
   const components = bikeComponents[bike.id] || [];
-  // Build rides list from DB ride_assignments (supports both regular and e-bike rides)
+  // Build rides list from DB ride_assignments using activity-ID keys
   const assignedKeys = Object.keys(rideAssignments||{}).filter(k => rideAssignments[k] === bike.id);
   const myRides = assignedKeys.map(k => {
     if (k.startsWith("ebike-")) {
       const actId = k.replace("ebike-", "");
-      const r = (stravaEbike||[]).find(x => x[0] === actId);
-      return r ? { key:k, d:r[1], mi:r[2], n:r[3], type:"ebike" } : null;
+      const r = (stravaEbike||[]).find(x => x.actId === actId);
+      return r ? { key:k, d:r.d, mi:r.mi, n:r.n, dur:r.dur, type:"ebike" } : null;
     } else {
-      const idx = parseInt(k);
-      const r = (stravaRides||[])[idx];
-      return r ? { key:k, d:r.d, mi:r.mi, n:r.n, dur:r.dur, type:"ride" } : null;
+      // key is "ride-{actId}" or "virtual-{actId}"
+      const r = (stravaRides||[]).find(x => x.key === k);
+      return r ? { key:k, d:r.d, mi:r.mi, n:r.n, dur:r.dur, type:r.type } : null;
     }
   }).filter(Boolean).sort((a,b) => b.d.localeCompare(a.d));
 
@@ -1609,19 +1604,23 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
   const compCost   = components.reduce((s,c)=>s+(c.cost||0),0);
   const svcCost    = allSvcLogs.reduce((s,l)=>s+(l.cost||0),0);
 
-  // Ride filtering — combines regular Strava rides + e-bike rides
+  // Ride filtering — uses sheet type routing based on bike subtype
   const filteredRides = (() => {
-    const allRegular = (stravaRides||[]).map((r, idx) => ({
-      key: String(idx), d: r.d, mi: r.mi, n: r.n, dur: r.dur, type: 'ride',
-      assignedTo: rideAssignments[String(idx)] || null,
-    }));
-    const allEbike = (stravaEbike||[]).map(r => ({
-      key: 'ebike-'+r[0], d: r[1], mi: r[2], n: r[3], type: 'ebike',
-      assignedTo: rideAssignments['ebike-'+r[0]] || null,
-    }));
-    return [...allRegular, ...allEbike].filter(r => {
-      if (rideFilter === 'mine')       return r.assignedTo === bike.id;
-      if (rideFilter === 'unassigned') return !r.assignedTo;
+    const allowedTypes = BIKE_SHEET_MAP[bike.type||"road"] || ["ride"];
+    const isEbike = allowedTypes.includes("ebike");
+    // Build pool from correct sheet(s)
+    const pool = isEbike
+      ? (stravaEbike||[]).map(r => ({
+          key: "ebike-"+r.actId, d: r.d, mi: r.mi, n: r.n, dur: r.dur, type: "ebike",
+          assignedTo: rideAssignments["ebike-"+r.actId] || null,
+        }))
+      : (stravaRides||[]).filter(r => allowedTypes.includes(r.type)).map(r => ({
+          key: r.key, d: r.d, mi: r.mi, n: r.n, dur: r.dur, type: r.type,
+          assignedTo: rideAssignments[r.key] || null,
+        }));
+    return pool.filter(r => {
+      if (rideFilter === "mine")       return r.assignedTo === bike.id;
+      if (rideFilter === "unassigned") return !r.assignedTo;
       return true;
     }).filter(r => {
       if (!rideSearch) return true;
@@ -3787,15 +3786,18 @@ export default function App() {
   async function loadStrava() {
     setStravaLoading(true);
     try {
-      const [rideRows, ebikeRows] = await Promise.all([
-        fetchStravaSheet(STRAVA_SHEET_ID),
-        fetchStravaSheet(STRAVA_EBIKE_SHEET_ID),
+      const [rideRows, virtualRows, ebikeRows] = await Promise.all([
+        fetchStravaSheet(STRAVA_SHEET_RIDE),
+        fetchStravaSheet(STRAVA_SHEET_VIRTUAL),
+        fetchStravaSheet(STRAVA_SHEET_EBIKE),
       ]);
-      const rides = parseStravaRows(rideRows);
-      const ebike = parseEbikeRows(ebikeRows);
-      setStravaRides(rides);
+      const rides   = parseSheetRows(rideRows,    "ride");
+      const virtual = parseSheetRows(virtualRows, "virtual");
+      const ebike   = parseSheetRows(ebikeRows,   "ebike");
+      // Combine regular + virtual into stravaRides; ebike separate
+      setStravaRides([...rides, ...virtual]);
       setStravaEbike(ebike);
-      console.log("Strava loaded:", rides.length, "rides,", ebike.length, "ebike rides");
+      console.log("Strava loaded:", rides.length, "rides,", virtual.length, "virtual,", ebike.length, "ebike");
     } catch(e) {
       console.error("loadStrava error:", e);
     }
