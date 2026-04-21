@@ -1857,6 +1857,7 @@ function HomeDetail({ property, items, homeLogs, homeAssets, onLogItem, onAddIte
 // ── Bike detail view ──────────────────────────────────────────────────────────
 function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: bikeUid, bikeComponents, rideAssignments, onLogItem, onUpdateBike, onSavePhoto, onAddComponent, onAssignRide, onRefreshPhotos, onRetire, onRestore, onBack }) {
   const [tab, setTab]               = useState("stats");
+  const [editingBike, setEditingBike] = useState(false);
   const [showLogFor, setShowLogFor] = useState(null);
   const [logForm, setLogForm]       = useState({ date:"", miles:"", cost:"", notes:"" });
   const [milesEdit, setMilesEdit]   = useState(bike.currentMiles.toString());
@@ -1939,11 +1940,20 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
           <div style={{fontSize:".7rem",color:"#4b5563",marginTop:4}}>Strava odometer</div>
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
+          <button className="btn btn-g btn-sm" onClick={()=>setEditingBike(true)}>✏️ Edit</button>
           {(bike.status||"active")==="active"
             ? <RetireModal type="bike" asset={bike} onRetire={(sd,sp)=>onRetire?onRetire(sd,sp):onUpdateBike(bike.id,{status:"retired",soldDate:sd||null,soldPrice:sp||null})} />
             : <button className="btn btn-g btn-sm" onClick={()=>onRestore?onRestore():onUpdateBike(bike.id,{status:"active",soldDate:null,soldPrice:null})}>↩ Restore</button>
           }
         </div>
+          {editingBike && (
+            <EditAssetModal
+              asset={bike}
+              type="bike"
+              onSave={updates=>onUpdateBike(bike.id, updates)}
+              onClose={()=>setEditingBike(false)}
+            />
+          )}
       </div>
 
       {/* Tabs */}
@@ -3138,52 +3148,33 @@ function HomeAssetDetail({ asset, schedules, logs, allPhotos, jwt, uid, onLog, o
       {/* INFO */}
       {tab==="info" && (
         <>
-          {!editing
-            ? <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:4}}>
-                {[
-                  ["Make",            asset.make],
-                  ["Model",           asset.model],
-                  ["Model Number",    asset.model_number],
-                  ["Serial Number",   asset.serial_number],
-                  ["Purchase Date",   asset.purchase_date],
-                  ["Warranty Expires",asset.warranty_expires],
-                  ["Notes",           asset.notes],
-                ].filter(([,v])=>v).map(([label,val])=>(
-                  <div key={label} style={{display:"flex",gap:12,fontSize:".84rem"}}>
-                    <div style={{color:"#6b7280",width:130,flexShrink:0}}>{label}</div>
-                    <div style={{color:"#e8e6e1"}}>{val}</div>
-                  </div>
-                ))}
-                <button className="btn btn-g btn-sm" style={{marginTop:8,alignSelf:"flex-start"}} onClick={()=>setEditing(true)}>✏️ Edit Info</button>
+          <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:4}}>
+            {[
+              ["Make",            asset.make],
+              ["Model",           asset.model],
+              ["Model Number",    asset.model_number],
+              ["Serial Number",   asset.serial_number],
+              ["Purchase Date",   asset.purchase_date],
+              ["Warranty Expires",asset.warranty_expires],
+              ["Notes",           asset.notes],
+            ].filter(([,v])=>v).map(([label,val])=>(
+              <div key={label} style={{display:"flex",gap:12,fontSize:".84rem"}}>
+                <div style={{color:"#6b7280",width:130,flexShrink:0}}>{label}</div>
+                <div style={{color:"#e8e6e1"}}>{val}</div>
               </div>
-            : <div>
-                <div className="field-row">
-                  <div className="field"><label>Make</label><input value={editForm.make} onChange={e=>setEditForm({...editForm,make:e.target.value})} placeholder="e.g. Carrier" /></div>
-                  <div className="field"><label>Model</label><input value={editForm.model} onChange={e=>setEditForm({...editForm,model:e.target.value})} placeholder="e.g. 58CVA" /></div>
-                </div>
-                <div className="field-row">
-                  <div className="field"><label>Model Number</label><input value={editForm.modelNumber} onChange={e=>setEditForm({...editForm,modelNumber:e.target.value})} /></div>
-                  <div className="field"><label>Serial Number</label><input value={editForm.serialNumber} onChange={e=>setEditForm({...editForm,serialNumber:e.target.value})} /></div>
-                </div>
-                <div className="field-row">
-                  <div className="field"><label>Purchase Date</label><input type="date" value={editForm.purchaseDate} onChange={e=>setEditForm({...editForm,purchaseDate:e.target.value})} /></div>
-                  <div className="field"><label>Warranty Expires</label><input type="date" value={editForm.warrantyExpires} onChange={e=>setEditForm({...editForm,warrantyExpires:e.target.value})} /></div>
-                </div>
-                <div className="field"><label>Notes</label><input value={editForm.notes} onChange={e=>setEditForm({...editForm,notes:e.target.value})} /></div>
-                <div style={{display:"flex",gap:8,marginTop:10}}>
-                  <button className="btn btn-p btn-sm" onClick={()=>{
-                    onUpdateAsset(asset.id, {
-                      make: editForm.make||null, model: editForm.model||null,
-                      model_number: editForm.modelNumber||null, serial_number: editForm.serialNumber||null,
-                      purchase_date: editForm.purchaseDate||null, warranty_expires: editForm.warrantyExpires||null,
-                      notes: editForm.notes||null,
-                    });
-                    setEditing(false);
-                  }}>Save</button>
-                  <button className="btn btn-g btn-sm" onClick={()=>setEditing(false)}>Cancel</button>
-                </div>
-              </div>
-          }
+            ))}
+            {![asset.make,asset.model,asset.model_number,asset.serial_number].some(Boolean) && (
+              <div style={{color:"#4b5563",fontSize:".84rem"}}>No info recorded. Click ✏️ Edit to add details.</div>
+            )}
+          </div>
+          {editing && (
+            <EditAssetModal
+              asset={asset}
+              type="home_asset"
+              onSave={updates=>onUpdateAsset(asset.id, updates)}
+              onClose={()=>setEditing(false)}
+            />
+          )}
         </>
       )}
 
@@ -3222,6 +3213,151 @@ function HomeAssetDetail({ asset, schedules, logs, allPhotos, jwt, uid, onLog, o
         </div>
       )}
     </>
+  );
+}
+
+
+// ── Edit Asset Modal ──────────────────────────────────────────────────────────
+function EditAssetModal({ asset, type, onSave, onClose }) {
+  const isVehicle   = type === "vehicle";
+  const isBike      = type === "bike";
+  const isHomeAsset = type === "home_asset";
+
+  const [form, setForm] = useState({
+    // Common
+    name:           asset.name || "",
+    make:           asset.make || "",
+    // Vehicle specific
+    year:           asset.year?.toString() || "",
+    odometer:       asset.odometer?.toString() || "",
+    vin:            asset.vin || "",
+    purchaseDate:   asset.purchaseDate || asset.purchase_date || "",
+    purchasePrice:  asset.purchasePrice?.toString() || asset.purchase_price?.toString() || "",
+    // Bike specific
+    model:          asset.model || "",
+    subtype:        asset.subtype || asset.type || "road",
+    currentMiles:   asset.currentMiles?.toString() || asset.current_miles?.toString() || "0",
+    purchaseYear:   asset.purchaseYear || asset.purchase_year || "",
+    weight:         asset.weight || "",
+    // Home asset specific
+    modelNumber:    asset.model_number || "",
+    serialNumber:   asset.serial_number || "",
+    warrantyExpires:asset.warranty_expires || "",
+  });
+
+  function save() {
+    const updates = {};
+    if (isVehicle) {
+      updates.name           = form.name;
+      updates.make           = form.make || null;
+      updates.year           = form.year ? parseInt(form.year) : null;
+      updates.odometer       = form.odometer ? parseInt(form.odometer) : null;
+      updates.vin            = form.vin || null;
+      updates.purchase_date  = form.purchaseDate || null;
+      updates.purchase_price = form.purchasePrice ? parseFloat(form.purchasePrice) : null;
+    } else if (isBike) {
+      updates.name          = form.name;
+      updates.make          = form.make || null;
+      updates.model         = form.model || null;
+      updates.subtype       = form.subtype;
+      updates.current_miles = form.currentMiles ? parseInt(form.currentMiles) : 0;
+      updates.purchase_year = form.purchaseYear || null;
+      updates.weight        = form.weight || null;
+    } else if (isHomeAsset) {
+      updates.name             = form.name;
+      updates.make             = form.make || null;
+      updates.model            = form.model || null;
+      updates.subtype          = form.subtype;
+      updates.model_number     = form.modelNumber || null;
+      updates.serial_number    = form.serialNumber || null;
+      updates.purchase_date    = form.purchaseDate || null;
+      updates.warranty_expires = form.warrantyExpires || null;
+    }
+    onSave(updates);
+    onClose();
+  }
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal" style={{maxWidth:520}} onClick={e=>e.stopPropagation()}>
+        <div className="modal-title">Edit {isVehicle?"Vehicle":isBike?"Bike":"Asset"}</div>
+
+        {/* Common fields */}
+        <div className="field-row">
+          <div className="field" style={{flex:2}}>
+            <label>{isVehicle?"Nickname":isBike?"Bike Name":"Asset Name"}</label>
+            <input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} autoFocus />
+          </div>
+          <div className="field">
+            <label>Make / Brand</label>
+            <input value={form.make} onChange={e=>setForm({...form,make:e.target.value})} placeholder={isVehicle?"e.g. BMW":isBike?"e.g. Cervelo":"e.g. Carrier"} />
+          </div>
+        </div>
+
+        {/* Vehicle fields */}
+        {isVehicle && (
+          <>
+            <div className="field-row">
+              <div className="field"><label>Year</label><input type="number" value={form.year} onChange={e=>setForm({...form,year:e.target.value})} /></div>
+              <div className="field"><label>Odometer (mi)</label><input type="number" value={form.odometer} onChange={e=>setForm({...form,odometer:e.target.value})} /></div>
+              <div className="field"><label>VIN</label><input value={form.vin} onChange={e=>setForm({...form,vin:e.target.value})} placeholder="17 characters" /></div>
+            </div>
+            <div className="field-row">
+              <div className="field"><label>Purchase Date</label><input type="date" value={form.purchaseDate} onChange={e=>setForm({...form,purchaseDate:e.target.value})} /></div>
+              <div className="field"><label>Purchase Price ($)</label><input type="number" value={form.purchasePrice} onChange={e=>setForm({...form,purchasePrice:e.target.value})} /></div>
+            </div>
+          </>
+        )}
+
+        {/* Bike fields */}
+        {isBike && (
+          <>
+            <div className="field-row">
+              <div className="field"><label>Model</label><input value={form.model} onChange={e=>setForm({...form,model:e.target.value})} placeholder="e.g. S3d Ultegra 8020" /></div>
+              <div className="field">
+                <label>Type</label>
+                <select value={form.subtype} onChange={e=>setForm({...form,subtype:e.target.value})}>
+                  {Object.entries(BIKE_CATS).map(([k,v])=>(<option key={k} value={k}>{v.icon} {v.label}</option>))}
+                </select>
+              </div>
+            </div>
+            <div className="field-row">
+              <div className="field"><label>Current Miles</label><input type="number" value={form.currentMiles} onChange={e=>setForm({...form,currentMiles:e.target.value})} /></div>
+              <div className="field"><label>Purchase Year</label><input type="number" value={form.purchaseYear} onChange={e=>setForm({...form,purchaseYear:e.target.value})} placeholder="2023" /></div>
+              <div className="field"><label>Weight</label><input value={form.weight} onChange={e=>setForm({...form,weight:e.target.value})} placeholder="e.g. 17.0 lbs" /></div>
+            </div>
+          </>
+        )}
+
+        {/* Home asset fields */}
+        {isHomeAsset && (
+          <>
+            <div className="field-row">
+              <div className="field"><label>Model</label><input value={form.model} onChange={e=>setForm({...form,model:e.target.value})} placeholder="e.g. WTW5000DW" /></div>
+              <div className="field">
+                <label>Category</label>
+                <select value={form.subtype} onChange={e=>setForm({...form,subtype:e.target.value})}>
+                  {Object.entries(HOME_ASSET_CATS).map(([k,v])=>(<option key={k} value={k}>{v.icon} {v.label}</option>))}
+                </select>
+              </div>
+            </div>
+            <div className="field-row">
+              <div className="field"><label>Model Number</label><input value={form.modelNumber} onChange={e=>setForm({...form,modelNumber:e.target.value})} /></div>
+              <div className="field"><label>Serial Number</label><input value={form.serialNumber} onChange={e=>setForm({...form,serialNumber:e.target.value})} /></div>
+            </div>
+            <div className="field-row">
+              <div className="field"><label>Purchase Date</label><input type="date" value={form.purchaseDate} onChange={e=>setForm({...form,purchaseDate:e.target.value})} /></div>
+              <div className="field"><label>Warranty Expires</label><input type="date" value={form.warrantyExpires} onChange={e=>setForm({...form,warrantyExpires:e.target.value})} /></div>
+            </div>
+          </>
+        )}
+
+        <div className="modal-btns">
+          <button className="btn btn-g" onClick={onClose}>Cancel</button>
+          <button className="btn btn-p" onClick={save}>Save Changes</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -3302,6 +3438,7 @@ export default function App() {
   const [showRetired,    setShowRetired]    = useState(false);
   const [selHomeAssetId,  setSelHomeAssetId]  = useState(null);
   const [showRetiredBikes,setShowRetiredBikes] = useState(false);
+  const [editingAsset, setEditingAsset]    = useState(null);
   const [tab,         setTab]         = useState("schedule");
   const [savingPhoto, setSavingPhoto] = useState(false);
   const [allPhotos,   setAllPhotos]   = useState([]);
@@ -4215,6 +4352,7 @@ export default function App() {
                       {totals.total>0 && <div style={{textAlign:"center"}}><div style={{fontSize:".9rem",fontWeight:600,color:"#f97316"}}>${totals.total.toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:0})}</div><div style={{fontSize:".62rem",color:"#6b7280",textTransform:"uppercase",letterSpacing:".06em"}}>Total Cost</div></div>}
                     </div>
                   </div>
+                    <button className="btn btn-g btn-sm" onClick={()=>setEditingAsset("vehicle")}>✏️ Edit</button>
                   <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
                     {(selVeh.status||"active")==="active"
                       ? <RetireModal type="vehicle" asset={v} onRetire={(sd,sp)=>retireAsset(selVeh.id,sd,sp)} />
@@ -4222,6 +4360,14 @@ export default function App() {
                     }
                   </div>
                 </div>
+                {editingAsset==="vehicle" && (
+                  <EditAssetModal
+                    asset={selVeh}
+                    type="vehicle"
+                    onSave={updates=>updateAsset(selVeh.id, updates)}
+                    onClose={()=>setEditingAsset(null)}
+                  />
+                )}
 
                 {/* Tabs */}
                 <div className="tabs">
