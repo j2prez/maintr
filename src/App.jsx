@@ -3221,6 +3221,26 @@ export default function App() {
   (Array.isArray(rideAssignments) ? rideAssignments : []).forEach(r => { rideMap[r.ride_key] = r.asset_id; });
 
   // ── Load all data from Supabase ─────────────────────────────────────────────
+  async function refreshSession() {
+    const s = loadSession();
+    if (!s?.refresh_token) return null;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON },
+        body: JSON.stringify({ refresh_token: s.refresh_token }),
+      });
+      const data = await res.json();
+      if (data.access_token) {
+        const newSession = { ...s, access_token: data.access_token, refresh_token: data.refresh_token || s.refresh_token, user: data.user || s.user };
+        saveSession(newSession);
+        setSession(newSession);
+        return data.access_token;
+      }
+    } catch(e) { console.error("Token refresh failed:", e); }
+    return null;
+  }
+
   async function loadAll() {
     if (!jwt) return;
     setLoading(true);
@@ -3242,6 +3262,14 @@ export default function App() {
         sbQ("schedules?order=label", jwt),
       ]);
 
+      console.log("loadAll results:", {assets: assetsRes?.length, svcLogs: svcRes?.length, fuel: fuelRes?.length, schedules: schedRes?.length});
+      console.log("assets sample:", Array.isArray(assetsRes) ? assetsRes.slice(0,2) : assetsRes);
+      if (!Array.isArray(assetsRes)) {
+        console.error("assets fetch failed:", assetsRes);
+        // Token may be expired — try refresh
+        const newJwt = await refreshSession();
+        if (newJwt) { setLoading(false); loadAll(); return; }
+      }
       setAssets(Array.isArray(assetsRes) ? assetsRes : []);
       setSvcLogs(Array.isArray(svcRes) ? svcRes : []);
       setFuelLogs(Array.isArray(fuelRes) ? fuelRes : []);
@@ -3268,7 +3296,14 @@ export default function App() {
     setLoading(false);
   }
 
-  useEffect(() => { if (jwt) loadAll(); }, [jwt]);
+  useEffect(() => {
+    if (!jwt) return;
+    // Try loading data — if it fails (expired token), refresh and retry
+    loadAll().catch(async () => {
+      const newJwt = await refreshSession();
+      if (newJwt) loadAll();
+    });
+  }, [jwt]);
 
   // ── Auth functions ──────────────────────────────────────────────────────────
   async function handleAuth() {
@@ -3281,7 +3316,7 @@ export default function App() {
         : await sbSignIn(email, password);
       console.log("Auth response:", JSON.stringify(res).slice(0, 300));
       if (res.access_token) {
-        const s = { access_token: res.access_token, user: res.user };
+        const s = { access_token: res.access_token, refresh_token: res.refresh_token, user: res.user };
         saveSession(s);
         setSession(s);
       } else {
@@ -3429,6 +3464,25 @@ export default function App() {
         <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}>
           <div className="logo" style={{fontSize:"2rem"}}>MAIN<span>TR</span></div>
           <div style={{color:"#6b7280",fontSize:".9rem"}}>Loading your fleet…</div>
+        </div>
+      </>
+    );
+  }
+
+  // If session exists but no data loaded, likely expired token — show sign out option
+  if (session && !loading && assets.length === 0) {
+    return (
+      <>
+        <style>{CSS}</style>
+        <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16,padding:24}}>
+          <div className="logo" style={{fontSize:"2rem"}}>MAIN<span>TR</span></div>
+          <div style={{color:"#6b7280",fontSize:".9rem",textAlign:"center"}}>
+            Could not load your data. Your session may have expired.
+          </div>
+          <div style={{display:"flex",gap:10}}>
+            <button className="btn btn-p" onClick={()=>loadAll()}>Retry</button>
+            <button className="btn btn-g" onClick={handleSignOut}>Sign Out & Back In</button>
+          </div>
         </div>
       </>
     );
