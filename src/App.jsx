@@ -2257,7 +2257,7 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
     } else {
       const idx = parseInt(k);
       const r = STRAVA_RIDES[idx];
-      return r ? { key:k, d:r[0], mi:r[2]/1609.34, n:r[1], type:"ride" } : null;
+      return r ? { key:k, d:r.d, mi:r.mi, n:r.n, dur:r.dur, type:"ride" } : null;
     }
   }).filter(Boolean).sort((a,b) => b.d.localeCompare(a.d));
 
@@ -2271,15 +2271,15 @@ function BikeDetail({ bike, bikeLogs, bikePhoto, allPhotos, jwt: bikeJwt, uid: b
 
   // Ride filtering — combines regular Strava rides + e-bike rides
   const filteredRides = (() => {
+  const filteredRides = (() => {
     const allRegular = STRAVA_RIDES.map((r, idx) => ({
-      key: String(idx), d: r[0], mi: r[2]/1609.34, n: r[1], type: 'ride',
+      key: String(idx), d: r.d, mi: r.mi, n: r.n, dur: r.dur, type: 'ride',
       assignedTo: rideAssignments[String(idx)] || null,
     }));
     const allEbike = STRAVA_EBIKE_RIDES.map(r => ({
       key: 'ebike-'+r[0], d: r[1], mi: r[2], n: r[3], type: 'ebike',
       assignedTo: rideAssignments['ebike-'+r[0]] || null,
     }));
-    return [...allRegular, ...allEbike].filter(r => {
       if (rideFilter === 'mine')       return r.assignedTo === bike.id;
       if (rideFilter === 'unassigned') return !r.assignedTo;
       return true;
