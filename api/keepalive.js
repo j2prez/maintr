@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   try {
-    const url = `${process.env.VITE_SUPABASE_URL}/rest/v1/assets?limit=1`;
+    const url = `https://riorzxpoxxtmrukvrqsy.supabase.co/rest/v1/assets?limit=1`;
     
     const response = await fetch(url, {
       headers: {
