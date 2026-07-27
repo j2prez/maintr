@@ -2915,7 +2915,7 @@ function PhotoGallery({ assetId, photos, allPhotos, jwt, uid, onPrimaryChange })
         <div style={{fontSize:".72rem",color:"#6b7280",textTransform:"uppercase",letterSpacing:".07em"}}>
           {assetPhotos.length} {assetPhotos.length===1?"Photo":"Photos"}
         </div>
-        {assetPhotos.length>0 && <div style={{fontSize:".68rem",color:"#4b5563"}}>Click photo to set as primary</div>}
+        {assetPhotos.length>0 && <div style={{fontSize:".68rem",color:"#4b5563"}}>Click a photo to view · use Set Primary to change the cover photo</div>}
       </div>
 
       {assetPhotos.length === 0
@@ -2937,8 +2937,9 @@ function PhotoGallery({ assetId, photos, allPhotos, jwt, uid, onPrimaryChange })
                   </span>
                 </div>
                 {!p.is_primary && (
-                  <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#0009",color:"#d1d5db",fontSize:".62rem",textAlign:"center",padding:"4px 0"}}
+                  <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#0009",color:"#d1d5db",fontSize:".62rem",fontWeight:500,textAlign:"center",padding:"4px 0",cursor:"pointer"}}
                     onClick={e=>{e.stopPropagation();setPrimary(p);}}>
+                    Set Primary
                   </div>
                 )}
               </div>
